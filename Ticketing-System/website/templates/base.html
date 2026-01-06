@@ -1,0 +1,1388 @@
+<!-- ================================
+     COMMON TABLE MACRO
+     ================================
+     Usage: Call render_tickets_table macro
+     ================================ -->
+<!-- ================================
+     COMMON TABLE MACRO
+     ================================
+     Usage: Call render_tickets_table macro
+     ================================ -->
+{% macro render_tickets_table(tickets, table_type) %}
+<div class="full-width-card card zoomtext mb-3 {{ 'admin-table' if table_type == 'admin' else '' }} {{ 'user-table' if table_type == 'user' else '' }}">
+    <div class="card-header text-muted">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle text-center w-100 {{ 'user-table' if table_type == 'user' else '' }}" style="table-layout: fixed;">
+                <thead class="thead-dark">
+                    <tr>
+                        {% if table_type == 'admin' and user.admin_code == '1236' %}
+                        {# Super Admin View #}
+                        <th style="width: 8%;">Ticket ID</th>
+                        <th style="width: 20%;">Title</th>
+                        <th style="width: 15%;">Created by</th>
+                        <th style="width: 15%;">Assigned to</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 20%;">Actions</th>
+                        {% elif table_type == 'admin' %}
+                        {# Regular Admin View #}
+                        <th style="width: 8%;">Ticket ID</th>
+                        <th style="width: 10%;">Title</th>
+                        <th style="width: 12%;">Description</th>
+                        <th style="width: 10%;">Created by</th>
+                        <th style="width: 10%;">Created on</th>
+                        <th style="width: 8%;">Project</th>
+                        <th style="width: 12%;">Team Lead</th>
+                        <th style="width: 10%;">Location</th>
+                        <th style="width: 9%;">Cubical</th>
+                        <th style="width: 10%;">Request Type</th>
+                        <th style="width: 11%;">Category</th>
+                        <th style="width: 10%;">Priority</th>
+                        <th style="width: 10%;">Assigned to</th>
+                        <th style="width: 16%;">ETA</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 16%;">Actions</th>
+                        {% else %}
+                        {# User View #}
+                        <th style="width: 8%;">Ticket ID</th>
+                        <th style="width: 10%;">Title</th>
+                        <th style="width: 12%;">Description</th>
+                        <th style="width: 10%;">Created on</th>
+                        <th style="width: 8%;">Project</th>
+                        <th style="width: 12%;">Team Lead</th>
+                        <th style="width: 10%;">Location</th>
+                        <th style="width: 9%;">Cubical</th>
+                        <th style="width: 10%;">Request Type</th>
+                        <th style="width: 11%;">Category</th>
+                        <th style="width: 14%;">Priority</th>
+                        <th style="width: 12%;">Assigned to</th>
+                        <th style="width: 11%;">Status</th>
+                        <th class="remarks-column" style="width: 20%;">Remarks</th>
+                        <th class="comments-column" style="width: 20%;">Comments</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if tickets and tickets|length > 0 %}
+                        {% for ticket in tickets %}
+                        <tr {% if table_type == 'user' and ticket.status in ['Closed', 'Solved'] %}class="ticket-closed"{% endif %}>
+                            {% if table_type == 'admin' and user.admin_code == '1236' %}
+                            {# Super Admin Row Data #}
+                            <td style="word-wrap: break-word;">{{ ticket.id }}</td>
+                            <td class="ticket-title" title="{{ ticket.title }}" style="word-wrap: break-word; cursor: pointer;" onclick="showFullText(this)">
+                                <span class="truncated-text" style="display: block;">{{ ticket.title[:30] }}{% if ticket.title|length > 30 %}...{% endif %}</span>
+                                <span class="full-text" style="display: none;">{{ ticket.title }}</span>
+                            </td>
+                            <td>
+                                {% if ticket.creator %}
+                                    {{ ticket.creator.first_name }} {{ ticket.creator.last_name if ticket.creator.last_name else '' }}
+                                {% else %}
+                                    {{ ticket.username }}
+                                {% endif %}
+                            </td>
+                            <td id="assigned-cell-{{ ticket.id }}">
+                                {% if ticket.assignment and ticket.assignment.user %}
+                                    {{ ticket.assignment.user.first_name }} {{ ticket.assignment.user.last_name }}
+                                {% else %}
+                                    Not Assigned
+                                {% endif %}
+                            </td>
+                            <td id="status-cell-{{ ticket.id }}">
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                <span class="
+                                    {% if status == 'Pending' %}status-pending
+                                    {% elif status == 'In Progress' %}status-in-progress
+                                    {% elif status == 'Closed' %}status-solved
+                                    {% elif status == 'Solved' %}status-solved
+                                    {% else %}status-pending{% endif %}
+                                " style="font-size: 11px; padding: 2px 6px;">
+                                    {{ status }}
+                                </span>
+                            </td>
+                            <td class="action-buttons text-center" style="vertical-align: middle; padding: 4px;">
+                                <button type="button"
+                                        class="btn btn-info btn-xs view-ticket-btn"
+                                        data-toggle="modal"
+                                        data-target="#viewTicketModal"
+                                        data-ticket-id="{{ ticket.id }}"
+                                        title="View Full Ticket Details"
+                                        style="font-size: 11px; padding: 3px 7px; white-space: nowrap;">
+                                    <i class="fas fa-eye"></i> View Ticket
+                                </button>
+                                <button type="button"
+                                        class="btn btn-primary btn-xs assign-btn"
+                                        data-toggle="modal"
+                                        data-target="#assignTicketModal"
+                                        data-ticket-id="{{ ticket.id }}"
+                                        data-assign-type="{% if ticket.assignment and ticket.assignment.user %}update{% else %}assign{% endif %}"
+                                        title="{% if ticket.assignment and ticket.assignment.user %}Reassign Ticket{% else %}Assign Ticket{% endif %}"
+                                        style="font-size: 11px; padding: 3px 7px; white-space: nowrap;">
+                                    {% if ticket.assignment and ticket.assignment.user %}
+                                    <i class="fa-solid fa-user-pen"></i> Update
+                                    {% else %}
+                                    <i class="fa-solid fa-user-plus"></i> Assign
+                                    {% endif %}
+                                </button>
+                            </td>
+                            {% else %}
+                            {# Regular Admin and User Row Data #}
+                            <td style="word-wrap: break-word;">{{ ticket.id }}</td>
+                            <td class="ticket-title" title="{{ ticket.title }}" style="word-wrap: break-word; cursor: pointer;" onclick="showFullText(this)">
+                                <span class="truncated-text" style="display: block;">{{ ticket.title[:20] }}{% if ticket.title|length > 20 %}...{% endif %}</span>
+                                <span class="full-text" style="display: none;">{{ ticket.title }}</span>
+                            </td>
+                            <td class="ticket-desc" title="{{ ticket.desc }}" style="word-wrap: break-word; cursor: pointer;" onclick="showFullText(this)">
+                                <span class="truncated-text" style="display: block;">{{ ticket.desc[:25] }}{% if ticket.desc|length > 25 %}...{% endif %}</span>
+                                <span class="full-text" style="display: none;">{{ ticket.desc }}</span>
+                            </td>
+                            {% if table_type == 'admin' %}
+                            <td>
+                                {% if ticket.creator %}
+                                    {{ ticket.creator.first_name }} {{ ticket.creator.last_name if ticket.creator.last_name else '' }}
+                                {% else %}
+                                    {{ ticket.username }}
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td style="word-wrap: break-word; font-size: 12px;">
+                                {{ server_local_format(ticket.date) }}
+                            </td>
+                            <td title="{{ ticket.project or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.project or 'N/A' }}</td>
+                            <td class="truncate" title="{{ ticket.project_manager or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.project_manager or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">{{ ticket.location or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">{{ ticket.cubical or 'N/A' }}</td>
+                            <td title="{{ ticket.ticket_type or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.ticket_type or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">
+                                {% if ticket.category %}
+                                    {% if ticket.category == 'Software' %}
+                                        <span class="badge badge-primary" style="font-size: 10px;" data-category="Software">
+                                            <i class="fas fa-laptop-code"></i> IT
+                                            <span style="display:none;">Software</span>
+                                        </span>
+                                    {% elif ticket.category == 'Hardware' %}
+                                        <span class="badge badge-secondary" style="font-size: 10px;">
+                                            <i class="fas fa-desktop"></i> {{ ticket.category }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-light" style="font-size: 10px;">{{ ticket.category }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 10px;">N/A</span>
+                                {% endif %}
+                            </td>
+                            <!-- Priority Column (Interactive for User, Static for Admin) -->
+                            <td>
+                                {% set current_priority = ticket.priority|default('Medium') %}
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                {% if table_type == 'user' %}
+                                    <select name="priority" class="form-control form-control-sm priority-select" 
+                                            data-ticket-id="{{ ticket.id }}" 
+                                            onchange="updateTicketPriority(this)"
+                                            {% if status in ['Closed', 'Solved'] %}disabled{% endif %}
+                                            style="font-size: 12px; min-width: 90px;">
+                                        <option value="High" {% if current_priority == 'High' %}selected{% endif %}>
+                                            High
+                                        </option>
+                                        <option value="Medium" {% if current_priority == 'Medium' %}selected{% endif %}>
+                                            Medium
+                                        </option>
+                                        <option value="Low" {% if current_priority == 'Low' %}selected{% endif %}>
+                                            Low
+                                        </option>
+                                    </select>
+                                {% else %}
+                                    {% if current_priority == 'High' %}
+                                        <span class="badge badge-danger">High</span>
+                                    {% elif current_priority == 'Medium' %}
+                                        <span class="badge badge-warning">Medium</span>
+                                    {% elif current_priority == 'Low' %}
+                                        <span class="badge badge-info">Low</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ current_priority }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+
+                            {% if table_type == 'admin' %}
+                            <!-- Admin View -->
+                            <td id="assigned-cell-{{ ticket.id }}">
+                                {% if ticket.assignment and ticket.assignment.user %}
+                                    {{ ticket.assignment.user.first_name }} {{ ticket.assignment.user.last_name }}
+                                {% else %}
+                                    Not Assigned
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 11px;">
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                {% set current_eta = ticket.assignment.eta if ticket.assignment else '' %}
+
+                                {% if status in ['Closed', 'Solved'] %}
+                                    {# For closed/solved tickets, show static text #}
+                                    {% if current_eta %}
+                                        {{ current_eta }}
+                                    {% else %}
+                                        <span class="text-muted">Not Set</span>
+                                    {% endif %}
+                                {% else %}
+                                    {# For open tickets, show the dropdown #}
+                                    <select class="form-control form-control-sm" 
+                                            onchange="updateTicketETA(this)" 
+                                            data-ticket-id="{{ ticket.id }}"
+                                            style="min-width: 100px; font-size: 12px;">
+                                        <option value="" {% if not current_eta %}selected{% endif %}>Not Set</option>
+                                        <option value="0-1 hours" {% if current_eta == '0-1 hours' %}selected{% endif %}>0-1 hours</option>
+                                        <option value="1-2 hours" {% if current_eta == '1-2 hours' %}selected{% endif %}>1-2 hours</option>
+                                        <option value="2-4 hours" {% if current_eta == '2-4 hours' %}selected{% endif %}>2-4 hours</option>
+                                        <option value="Infinity" {% if current_eta == 'Infinity' %}selected{% endif %}>Infinity</option>
+                                    </select>
+                                {% endif %}
+                            </td>
+                            <td id="status-cell-{{ ticket.id }}">
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                <span class="
+                                    {% if status == 'Pending' %}status-pending
+                                    {% elif status == 'In Progress' %}status-in-progress
+                                    {% elif status == 'Closed' %}status-solved
+                                    {% elif status == 'Solved' %}status-solved
+                                    {% else %}status-pending{% endif %}
+                                " style="font-size: 11px; padding: 2px 6px;">
+                                    {{ status }}
+                                </span>
+                                {# Show closed/solved time if applicable. This now correctly shows the closure time from the new `closed_date` field. #}
+                                {% if status in ['Closed', 'Solved'] and ticket.assignment and ticket.assignment.closed_date %}
+                                <div class="text-muted" style="font-size: 10px; margin-top: 3px;">
+                                    <i class="fas fa-check-circle"></i>
+                                    {{ server_local_format(ticket.assignment.closed_date, '%b %d, %I:%M %p') }}
+                                </div>
+                                {# Fallback for older closed tickets that might not have a closed_date #}
+                                {% elif status in ['Closed', 'Solved'] %}
+                                <div class="text-muted" style="font-size: 10px; margin-top: 3px;"><i class="fas fa-check-circle"></i> Done</div>
+                                {% endif %}
+                            </td>
+                            <td class="action-buttons text-center" style="vertical-align: middle; padding: 4px;">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-xs assign-btn"
+                                        data-toggle="modal"
+                                        data-target="#assignTicketModal"
+                                        data-ticket-id="{{ ticket.id }}"
+                                        data-assign-type="{% if ticket.assignment and ticket.assignment.user %}update{% else %}assign{% endif %}"
+                                        title="{% if ticket.assignment and ticket.assignment.user %}Reassign Ticket{% else %}Assign Ticket{% endif %}"
+                                        style="font-size: 11px; padding: 3px 7px; white-space: nowrap;">
+                                    {% if ticket.assignment and ticket.assignment.user %}
+                                    <i class="fa-solid fa-user-pen"></i> Update
+                                    {% else %}
+                                    <i class="fa-solid fa-user-plus"></i> Assign
+                                    {% endif %}
+                                </button>
+                            </td>
+                            {% else %}
+                            <!-- User View -->
+                            <td>{{ ticket.assigned or 'Not Assigned' }}</td>
+                            <td>
+                                {% set status = ticket.status or 'Pending' %}
+                                <span class="
+                                    {% if status == 'Pending' %}status-pending
+                                    {% elif status == 'In Progress' %}status-in-progress
+                                    {% elif status == 'Closed' %}status-solved
+                                    {% elif status == 'Solved' %}status-solved
+                                    {% else %}status-pending{% endif %}
+                                " style="font-size: 11px; padding: 2px 6px;">
+                                    {{ status }}
+                                </span>
+                            </td>
+                            <!-- Remarks Column (dynamic comment history) -->
+                            <td class="remarks-column" style="text-align: left; vertical-align: top; padding: 8px;">
+                                <div id="user-remarks-{{ ticket.id }}" class="user-remarks" style="max-height: 120px; overflow-y: auto;">
+                                    <div class="text-muted text-center"><small style="font-size: 11px;">Loading...</small></div>
+                                </div>
+                                <script>
+                                  (function() {
+                                    const containerId = 'user-remarks-{{ ticket.id }}';
+                                    const url = '/get-ticket-comments/{{ ticket.id }}';
+                                    const eta = {{ ticket.assignment.eta|tojson|safe if ticket.assignment and ticket.assignment.eta else 'null' }};
+
+                                    fetch(url, { headers: { 'Accept': 'application/json' }})
+                                      .then(r => r.json())
+                                      .then(data => {
+                                        const el = document.getElementById(containerId);
+                                        if (!el) return;
+
+                                        let etaHtml = '';
+                                        if (eta) {
+                                            etaHtml = `<div class="mb-2"><strong>ETA:</strong> <span class="badge badge-info">${eta}</span></div>`;
+                                        }
+
+                                        const hasComments = data.success && data.comments && data.comments.length > 0 && !(data.comments.length === 1 && data.comments[0].type === 'system');
+
+                                        if (!hasComments) {
+                                          // If there's an ETA, show it. Otherwise, show nothing or "no comments".
+                                          if (eta) {
+                                            el.innerHTML = etaHtml + '<div class="text-muted text-center"><small style="font-size: 11px;">No comments yet</small></div>';
+                                          } else {
+                                            el.innerHTML = '<div class="text-muted text-center"><small style="font-size: 11px;">No remarks yet</small></div>';
+                                          }
+                                          return;
+                                        }
+                                        
+                                        let commentsHtml = '';
+                                        data.comments.forEach(c => {
+                                          if (c.type === 'system') return; // Don't show system placeholder messages
+                                          let bg = '#e3f2fd', bd = '#2196f3', tc = '#1565c0', ic = 'fa-user-shield';
+                                          if (c.type === 'user') { bg = '#f1f8e9'; bd = '#4caf50'; tc = '#2e7d32'; ic = 'fa-user'; }
+                                          
+                                          commentsHtml += `
+                                            <div class="mb-2" style="padding: 6px 8px; background-color: ${bg}; border-left: 3px solid ${bd}; border-radius: 4px; font-size: 12px;">
+                                              <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-weight: bold; color: ${tc};"><i class="fas ${ic}"></i> ${c.user_name || 'User'}</span>
+                                                <small style="color:#666;">${c.timestamp ? `<span class="js-local-time" data-utc="${String(c.timestamp).includes('T') ? c.timestamp : (String(c.timestamp).replace(' ', 'T') + ':00Z')}">${c.timestamp}</span>` : 'N/A'}</small>
+                                              </div>
+                                              <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.3;">${c.text || ''}</div>
+                                            </div>`;
+                                        });
+                                        el.innerHTML = etaHtml + commentsHtml;
+                                      })
+                                      .catch(() => {
+                                        const el = document.getElementById(containerId);
+                                        if (el) el.innerHTML = '<div class="text-danger text-center"><small style="font-size: 11px;">Failed to load comments</small></div>';
+                                      });
+                                  })();
+                                </script>
+                            </td>
+                            <!-- Comments Column (User input area with action buttons) -->
+                            <td class="comments-column" style="text-align: left; vertical-align: top; padding: 8px;">
+                                {% set status = ticket.status or 'Pending' %}
+                                
+                                {% if status.lower() == 'closed' %}
+                                    <!-- For closed tickets, show reopen button -->
+                                    <div class="d-flex flex-column align-items-center">
+                                        <button type="button" 
+                                                class="btn btn-warning btn-xs reopen-ticket-btn"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}"
+                                                title="Reopen this ticket if issue persists"
+                                                style="font-size: 11px; padding: 4px 8px;">
+                                            <i class="fas fa-redo"></i> Reopen
+                                        </button>
+                                        <small class="text-muted mt-1" style="font-size: 10px;">Issue not resolved?</small>
+                                    </div>
+                                {% elif status.lower() == 'solved' %}
+                                    <!-- For solved tickets, show read-only message -->
+                                    <div class="alert alert-success alert-sm p-1 m-0 text-center" style="font-size: 11px;">
+                                        <i class="fas fa-check-circle"></i> Solved
+                                        <small class="d-block text-muted" style="font-size: 10px;">Create new ticket for new issues</small>
+                                    </div>
+                                {% else %}
+                                    <!-- For open tickets, show comment input and action buttons -->
+                                    <div>
+                                        {% set existing_comment = ticket.assignment.comment if ticket.assignment and ticket.assignment.comment else '' %}
+                                        <textarea name="remark"
+                                                form="remark-form-{{ ticket.id }}"
+                                                placeholder="Add your comment..."
+                                                class="form-control comment-textarea mb-2"
+                                                rows="2"
+                                                style="width: 100%; resize: vertical; font-size: 13px; min-height: 60px;"></textarea>
+                                        
+                                        <!-- Action buttons -->
+                                        <div class="d-flex justify-content-center">
+                                            <!-- Save Comment -->
+                                            <form id="remark-form-{{ ticket.id }}"
+                                                method="POST"
+                                                action="{{ url_for('views.add_remark', ticket_id=ticket.id) }}"
+                                                class="mr-1 user-comment-save-form"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}">
+                                                <button type="submit" 
+                                                        class="comment-btn btn btn-xs btn-primary user-comment-save-btn" 
+                                                        title="Add Comment"
+                                                        style="font-size: 11px; padding: 4px 8px;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <!-- Speech bubble -->
+                                                        <path d="M21 8C21 4.13 16.42 1 12 1S3 4.13 3 8c0 2.11 1.19 4.02 3.14 5.33L5 17l4.17-1.17C10.08 15.95 11.03 16 12 16c4.42 0 9-3.13 9-8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                                        <!-- Upward arrow -->
+                                                        <path d="M12 12V6M9 9l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+
+                                            <!-- Delete Ticket - Only for Pending status -->
+                                            {% if status.lower() == 'pending' %}
+                                            <form method="POST"
+                                                action="{{ url_for('views.user_delete_ticket', ticket_id=ticket.id) }}"
+                                                class="user-ticket-delete-form"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}">
+                                                <button type="submit" 
+                                                        class="delete-btn btn btn-xs btn-danger user-ticket-delete-btn" 
+                                                        title="Delete this ticket"
+                                                        style="font-size: 11px; padding: 4px 8px;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if table_type == 'admin' and user.admin_code == '1236' %}7{% elif table_type == 'admin' %}16{% else %}13{% endif %}" class="table-empty">
+                            <i class="fas fa-inbox"></i>
+                            <br>
+                            {% if table_type == 'admin' %}
+                            No tickets found in the system.
+                            {% else %}
+                            You haven't created any tickets yet.
+                            <br>
+                            <small class="text-muted">Click "Report Problem" to create your first ticket.</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<!-- ================================
+     COMMON TABLE MACRO
+     ================================
+     Usage: Call render_tickets_table macro
+     ================================ -->
+{% macro render_tickets_table_old(tickets, table_type) %}
+<div class="full-width-card card zoomtext mb-3 {{ 'admin-table' if table_type == 'admin' else '' }} {{ 'user-table' if table_type == 'user' else '' }}">
+    <div class="card-header text-muted">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle text-center w-100 {{ 'user-table' if table_type == 'user' else '' }}" style="table-layout: fixed;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th style="width: 8%;">Ticket ID</th>
+                        <th style="width: 10%;">Title</th>
+                        <th style="width: 12%;">Description</th>
+                        {% if table_type == 'admin' %}
+                        <th style="width: 10%;">Created by</th>
+                        {% endif %}
+                        <th style="width: 10%;">Created on</th>
+                        <th style="width: 8%;">Project</th>
+                        <th style="width: 12%;">Team Lead</th>
+                        <th style="width: 10%;">Location</th>
+                        <th style="width: 9%;">Cubical</th>
+                        <th style="width: 10%;">Request Type</th>
+                        <th style="width: 11%;">Category</th>
+                        {% if table_type == 'admin' %}
+                        <th style="width: 10%;">Priority</th>
+                        <th style="width: 10%;">Assigned to</th>
+                        <th style="width: 16%;">ETA</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 16%;">Actions</th>
+                        {% else %}
+                        <th style="width: 14%;">Priority</th>
+                        <th style="width: 12%;">Assigned to</th>
+                        <th style="width: 11%;">Status</th>
+                        <th class="remarks-column" style="width: 20%;">Remarks</th>
+                        <th class="comments-column" style="width: 20%;">Comments</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if tickets and tickets|length > 0 %}
+                        {% for ticket in tickets %}
+                        <tr {% if table_type == 'user' and ticket.status in ['Closed', 'Solved'] %}class="ticket-closed"{% endif %}>
+                            <td style="word-wrap: break-word;">{{ ticket.id }}</td>
+                            <td class="ticket-title" title="{{ ticket.title }}" style="word-wrap: break-word; cursor: pointer;" onclick="showFullText(this)">
+                                <span class="truncated-text" style="display: block;">{{ ticket.title[:20] }}{% if ticket.title|length > 20 %}...{% endif %}</span>
+                                <span class="full-text" style="display: none;">{{ ticket.title }}</span>
+                            </td>
+                            <td class="ticket-desc" title="{{ ticket.desc }}" style="word-wrap: break-word; cursor: pointer;" onclick="showFullText(this)">
+                                <span class="truncated-text" style="display: block;">{{ ticket.desc[:25] }}{% if ticket.desc|length > 25 %}...{% endif %}</span>
+                                <span class="full-text" style="display: none;">{{ ticket.desc }}</span>
+                            </td>
+                            {% if table_type == 'admin' %}
+                            <td>
+                                {% if ticket.creator %}
+                                    {{ ticket.creator.first_name }} {{ ticket.creator.last_name if ticket.creator.last_name else '' }}
+                                {% else %}
+                                    {{ ticket.username }}
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td style="word-wrap: break-word; font-size: 12px;">
+                                {{ server_local_format(ticket.date) }}
+                            </td>
+                            <td title="{{ ticket.project or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.project or 'N/A' }}</td>
+                            <td class="truncate" title="{{ ticket.project_manager or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.project_manager or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">{{ ticket.location or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">{{ ticket.cubical or 'N/A' }}</td>
+                            <td title="{{ ticket.ticket_type or 'N/A' }}" style="word-wrap: break-word;">{{ ticket.ticket_type or 'N/A' }}</td>
+                            <td style="word-wrap: break-word;">
+                                {% if ticket.category %}
+                                    {% if ticket.category == 'Software' %}
+                                        <span class="badge badge-primary" style="font-size: 10px;" data-category="Software">
+                                            <i class="fas fa-laptop-code"></i> IT
+                                            <span style="display:none;">Software</span>
+                                        </span>
+                                    {% elif ticket.category == 'Hardware' %}
+                                        <span class="badge badge-secondary" style="font-size: 10px;">
+                                            <i class="fas fa-desktop"></i> {{ ticket.category }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-light" style="font-size: 10px;">{{ ticket.category }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted" style="font-size: 10px;">N/A</span>
+                                {% endif %}
+                            </td>
+                            <!-- Priority Column (Interactive for User, Static for Admin) -->
+                            <td>
+                                {% set current_priority = ticket.priority|default('Medium') %}
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                {% if table_type == 'user' %}
+                                    <select name="priority" class="form-control form-control-sm priority-select" 
+                                            data-ticket-id="{{ ticket.id }}" 
+                                            onchange="updateTicketPriority(this)"
+                                            {% if status in ['Closed', 'Solved'] %}disabled{% endif %}
+                                            style="font-size: 12px; min-width: 90px;">
+                                        <option value="High" {% if current_priority == 'High' %}selected{% endif %}>
+                                            High
+                                        </option>
+                                        <option value="Medium" {% if current_priority == 'Medium' %}selected{% endif %}>
+                                            Medium
+                                        </option>
+                                        <option value="Low" {% if current_priority == 'Low' %}selected{% endif %}>
+                                            Low
+                                        </option>
+                                    </select>
+                                {% else %}
+                                    {% if current_priority == 'High' %}
+                                        <span class="badge badge-danger">High</span>
+                                    {% elif current_priority == 'Medium' %}
+                                        <span class="badge badge-warning">Medium</span>
+                                    {% elif current_priority == 'Low' %}
+                                        <span class="badge badge-info">Low</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ current_priority }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+
+                            {% if table_type == 'admin' %}
+                            <!-- Admin View -->
+                            <td id="assigned-cell-{{ ticket.id }}">
+                                {% if ticket.assignment and ticket.assignment.user %}
+                                    {{ ticket.assignment.user.first_name }} {{ ticket.assignment.user.last_name }}
+                                {% else %}
+                                    Not Assigned
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 11px;">
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                {% set current_eta = ticket.assignment.eta if ticket.assignment else '' %}
+
+                                {% if status in ['Closed', 'Solved'] %}
+                                    {# For closed/solved tickets, show static text #}
+                                    {% if current_eta %}
+                                        {{ current_eta }}
+                                    {% else %}
+                                        <span class="text-muted">Not Set</span>
+                                    {% endif %}
+                                {% else %}
+                                    {# For open tickets, show the dropdown #}
+                                    <select class="form-control form-control-sm" 
+                                            onchange="updateTicketETA(this)" 
+                                            data-ticket-id="{{ ticket.id }}"
+                                            style="min-width: 100px; font-size: 12px;">
+                                        <option value="" {% if not current_eta %}selected{% endif %}>Not Set</option>
+                                        <option value="0-1 hours" {% if current_eta == '0-1 hours' %}selected{% endif %}>0-1 hours</option>
+                                        <option value="1-2 hours" {% if current_eta == '1-2 hours' %}selected{% endif %}>1-2 hours</option>
+                                        <option value="2-4 hours" {% if current_eta == '2-4 hours' %}selected{% endif %}>2-4 hours</option>
+                                        <option value="Infinity" {% if current_eta == 'Infinity' %}selected{% endif %}>Infinity</option>
+                                    </select>
+                                {% endif %}
+                            </td>
+                            <td id="status-cell-{{ ticket.id }}">
+                                {% set status = ticket.status or (ticket.assignment.status if ticket.assignment else 'Pending') %}
+                                <span class="
+                                    {% if status == 'Pending' %}status-pending
+                                    {% elif status == 'In Progress' %}status-in-progress
+                                    {% elif status == 'Closed' %}status-solved
+                                    {% elif status == 'Solved' %}status-solved
+                                    {% else %}status-pending{% endif %}
+                                " style="font-size: 11px; padding: 2px 6px;">
+                                    {{ status }}
+                                </span>
+                                {# Show closed/solved time if applicable. This now correctly shows the closure time from the new `closed_date` field. #}
+                                {% if status in ['Closed', 'Solved'] and ticket.assignment and ticket.assignment.closed_date %}
+                                <div class="text-muted" style="font-size: 10px; margin-top: 3px;">
+                                    <i class="fas fa-check-circle"></i>
+                                    {{ server_local_format(ticket.assignment.closed_date, '%b %d, %I:%M %p') }}
+                                </div>
+                                {# Fallback for older closed tickets that might not have a closed_date #}
+                                {% elif status in ['Closed', 'Solved'] %}
+                                <div class="text-muted" style="font-size: 10px; margin-top: 3px;"><i class="fas fa-check-circle"></i> Done</div>
+                                {% endif %}
+                            </td>
+                            <td class="action-buttons text-center" style="vertical-align: middle; padding: 4px;">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-xs assign-btn"
+                                        data-toggle="modal"
+                                        data-target="#assignTicketModal"
+                                        data-ticket-id="{{ ticket.id }}"
+                                        data-assign-type="{% if ticket.assignment and ticket.assignment.user %}update{% else %}assign{% endif %}"
+                                        title="{% if ticket.assignment and ticket.assignment.user %}Reassign Ticket{% else %}Assign Ticket{% endif %}"
+                                        style="font-size: 11px; padding: 3px 7px; white-space: nowrap;">
+                                    {% if ticket.assignment and ticket.assignment.user %}
+                                    <i class="fa-solid fa-user-pen"></i> Update
+                                    {% else %}
+                                    <i class="fa-solid fa-user-plus"></i> Assign
+                                    {% endif %}
+                                </button>
+                            </td>
+                            {% else %}
+                            <!-- User View -->
+                            <td>{{ ticket.assigned or 'Not Assigned' }}</td>
+                            <td>
+                                {% set status = ticket.status or 'Pending' %}
+                                <span class="
+                                    {% if status == 'Pending' %}status-pending
+                                    {% elif status == 'In Progress' %}status-in-progress
+                                    {% elif status == 'Closed' %}status-solved
+                                    {% elif status == 'Solved' %}status-solved
+                                    {% else %}status-pending{% endif %}
+                                " style="font-size: 11px; padding: 2px 6px;">
+                                    {{ status }}
+                                </span>
+                            </td>
+                            <!-- Remarks Column (dynamic comment history) -->
+                            <td class="remarks-column" style="text-align: left; vertical-align: top; padding: 8px;">
+                                <div id="user-remarks-{{ ticket.id }}" class="user-remarks" style="max-height: 120px; overflow-y: auto;">
+                                    <div class="text-muted text-center"><small style="font-size: 11px;">Loading...</small></div>
+                                </div>
+                                <script>
+                                  (function() {
+                                    const containerId = 'user-remarks-{{ ticket.id }}';
+                                    const url = '/get-ticket-comments/{{ ticket.id }}';
+                                    const eta = {{ ticket.assignment.eta|tojson|safe if ticket.assignment and ticket.assignment.eta else 'null' }};
+
+                                    fetch(url, { headers: { 'Accept': 'application/json' }})
+                                      .then(r => r.json())
+                                      .then(data => {
+                                        const el = document.getElementById(containerId);
+                                        if (!el) return;
+
+                                        let etaHtml = '';
+                                        if (eta) {
+                                            etaHtml = `<div class="mb-2"><strong>ETA:</strong> <span class="badge badge-info">${eta}</span></div>`;
+                                        }
+
+                                        const hasComments = data.success && data.comments && data.comments.length > 0 && !(data.comments.length === 1 && data.comments[0].type === 'system');
+
+                                        if (!hasComments) {
+                                          // If there's an ETA, show it. Otherwise, show nothing or "no comments".
+                                          if (eta) {
+                                            el.innerHTML = etaHtml + '<div class="text-muted text-center"><small style="font-size: 11px;">No comments yet</small></div>';
+                                          } else {
+                                            el.innerHTML = '<div class="text-muted text-center"><small style="font-size: 11px;">No remarks yet</small></div>';
+                                          }
+                                          return;
+                                        }
+                                        
+                                        let commentsHtml = '';
+                                        data.comments.forEach(c => {
+                                          if (c.type === 'system') return; // Don't show system placeholder messages
+                                          let bg = '#e3f2fd', bd = '#2196f3', tc = '#1565c0', ic = 'fa-user-shield';
+                                          if (c.type === 'user') { bg = '#f1f8e9'; bd = '#4caf50'; tc = '#2e7d32'; ic = 'fa-user'; }
+                                          
+                                          commentsHtml += `
+                                            <div class="mb-2" style="padding: 6px 8px; background-color: ${bg}; border-left: 3px solid ${bd}; border-radius: 4px; font-size: 12px;">
+                                              <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-weight: bold; color: ${tc};"><i class="fas ${ic}"></i> ${c.user_name || 'User'}</span>
+                                                <small style="color:#666;">${c.timestamp ? `<span class="js-local-time" data-utc="${String(c.timestamp).includes('T') ? c.timestamp : (String(c.timestamp).replace(' ', 'T') + ':00Z')}">${c.timestamp}</span>` : 'N/A'}</small>
+                                              </div>
+                                              <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.3;">${c.text || ''}</div>
+                                            </div>`;
+                                        });
+                                        el.innerHTML = etaHtml + commentsHtml;
+                                      })
+                                      .catch(() => {
+                                        const el = document.getElementById(containerId);
+                                        if (el) el.innerHTML = '<div class="text-danger text-center"><small style="font-size: 11px;">Failed to load comments</small></div>';
+                                      });
+                                  })();
+                                </script>
+                            </td>
+                            <!-- Comments Column (User input area with action buttons) -->
+                            <td class="comments-column" style="text-align: left; vertical-align: top; padding: 8px;">
+                                {% set status = ticket.status or 'Pending' %}
+                                
+                                {% if status.lower() == 'closed' %}
+                                    <!-- For closed tickets, show reopen button -->
+                                    <div class="d-flex flex-column align-items-center">
+                                        <button type="button" 
+                                                class="btn btn-warning btn-xs reopen-ticket-btn"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}"
+                                                title="Reopen this ticket if issue persists"
+                                                style="font-size: 11px; padding: 4px 8px;">
+                                            <i class="fas fa-redo"></i> Reopen
+                                        </button>
+                                        <small class="text-muted mt-1" style="font-size: 10px;">Issue not resolved?</small>
+                                    </div>
+                                {% elif status.lower() == 'solved' %}
+                                    <!-- For solved tickets, show read-only message -->
+                                    <div class="alert alert-success alert-sm p-1 m-0 text-center" style="font-size: 11px;">
+                                        <i class="fas fa-check-circle"></i> Solved
+                                        <small class="d-block text-muted" style="font-size: 10px;">Create new ticket for new issues</small>
+                                    </div>
+                                {% else %}
+                                    <!-- For open tickets, show comment input and action buttons -->
+                                    <div>
+                                        {% set existing_comment = ticket.assignment.comment if ticket.assignment and ticket.assignment.comment else '' %}
+                                        <textarea name="remark"
+                                                form="remark-form-{{ ticket.id }}"
+                                                placeholder="Add your comment..."
+                                                class="form-control comment-textarea mb-2"
+                                                rows="2"
+                                                style="width: 100%; resize: vertical; font-size: 13px; min-height: 60px;"></textarea>
+                                        
+                                        <!-- Action buttons -->
+                                        <div class="d-flex justify-content-center">
+                                            <!-- Save Comment -->
+                                            <form id="remark-form-{{ ticket.id }}"
+                                                method="POST"
+                                                action="{{ url_for('views.add_remark', ticket_id=ticket.id) }}"
+                                                class="mr-1 user-comment-save-form"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}">
+                                                <button type="submit" 
+                                                        class="comment-btn btn btn-xs btn-primary user-comment-save-btn" 
+                                                        title="Add Comment"
+                                                        style="font-size: 11px; padding: 4px 8px;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <!-- Speech bubble -->
+                                                        <path d="M21 8C21 4.13 16.42 1 12 1S3 4.13 3 8c0 2.11 1.19 4.02 3.14 5.33L5 17l4.17-1.17C10.08 15.95 11.03 16 12 16c4.42 0 9-3.13 9-8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                                        <!-- Upward arrow -->
+                                                        <path d="M12 12V6M9 9l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+
+                                            <!-- Delete Ticket - Only for Pending status -->
+                                            {% if status.lower() == 'pending' %}
+                                            <form method="POST"
+                                                action="{{ url_for('views.user_delete_ticket', ticket_id=ticket.id) }}"
+                                                class="user-ticket-delete-form"
+                                                data-ticket-id="{{ ticket.id }}"
+                                                data-ticket-title="{{ ticket.title }}">
+                                                <button type="submit" 
+                                                        class="delete-btn btn btn-xs btn-danger user-ticket-delete-btn" 
+                                                        title="Delete this ticket"
+                                                        style="font-size: 11px; padding: 4px 8px;">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if table_type == 'admin' %}16{% else %}13{% endif %}" class="table-empty">
+                            <i class="fas fa-inbox"></i>
+                            <br>
+                            {% if table_type == 'admin' %}
+                            No tickets found in the system.
+                            {% else %}
+                            You haven't created any tickets yet.
+                            <br>
+                            <small class="text-muted">Click "Report Problem" to create your first ticket.</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<!-- ================================
+     PAGINATION MACRO
+     ================================
+     Renders a smart pagination control.
+     - page: current page number
+     - pages: total number of pages
+     - endpoint: the Flask endpoint for the URL (e.g., 'views.tickets')
+     ================================ -->
+{% macro render_pagination(page, pages, endpoint, q=None) %}
+{% if pages > 1 %}
+<nav>
+  <ul class="pagination mb-0">
+    {# Previous Page Link #}
+    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for(endpoint, page=page - 1, q=q) }}">Previous</a>
+    </li>
+
+    {% set window = 1 %}
+    {% set show_first = page > window + 1 %}
+    {% set show_last = page < pages - window %}
+    {% set show_left_ellipsis = page > window + 2 %}
+    {% set show_right_ellipsis = page < pages - window - 1 %}
+
+    {% if show_first %}
+      <li class="page-item"><a class="page-link" href="{{ url_for(endpoint, page=1, q=q) }}">1</a></li>
+    {% endif %}
+
+    {% if show_left_ellipsis %}
+      <li class="page-item disabled"><span class="page-link">...</span></li>
+    {% endif %}
+
+    {% for p in range(1, pages + 1) %}
+      {% if p >= page - window and p <= page + window %}
+        <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=p, q=q) }}">{{ p }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if show_right_ellipsis %}
+      <li class="page-item disabled"><span class="page-link">...</span></li>
+    {% endif %}
+
+    {% if show_last %}
+      <li class="page-item"><a class="page-link" href="{{ url_for(endpoint, page=pages, q=q) }}">{{ pages }}</a></li>
+    {% endif %}
+
+    {# Next Page Link #}
+    <li class="page-item {% if page >= pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for(endpoint, page=page + 1, q=q) }}">Next</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endmacro %}
+
+<!-- JavaScript for expandable text -->
+<script>
+function showFullText(element) {
+    const truncatedSpan = element.querySelector('.truncated-text');
+    const fullSpan = element.querySelector('.full-text');
+    
+    if (truncatedSpan.style.display === 'block') {
+        // Expand
+        truncatedSpan.style.display = 'none';
+        fullSpan.style.display = 'block';
+        element.style.whiteSpace = 'normal';
+        element.style.wordWrap = 'break-word';
+    } else {
+        // Collapse
+        truncatedSpan.style.display = 'block';
+        fullSpan.style.display = 'none';
+    }
+}
+
+// Add simple hover effect for title and description cells
+document.addEventListener('DOMContentLoaded', function() {
+    const clickableElements = document.querySelectorAll('.ticket-title, .ticket-desc');
+    clickableElements.forEach(function(element) {
+        element.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        element.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+</script>
+
+<!-- Global Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" role="dialog" aria-labelledby="confirmActionLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="confirmActionLabel">⚠️ Confirm Action</h5>
+        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> This action cannot be undone!
+        </div>
+        <p id="confirmActionText" class="mb-2">Are you sure?</p>
+        <ul class="mb-0 small text-muted" id="confirmActionDetails" style="display:none"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal" data-role="close">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmActionBtn">
+          <i class="fas fa-trash"></i> Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================
+     USER MANAGEMENT TABLE MACRO
+     ================================
+     Usage: Call render_users_table macro
+     ================================ -->
+{% macro render_users_table(users) %}
+<div class="full-width-card card zoomtext mb-3">
+    <div class="card-header text-muted">
+        <div class="table-responsive d-flex justify-content-center">
+            <table class="table table-bordered table-hover table-striped align-middle table-fixed w-100">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Account Type</th>
+                        <th>Roles</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if users and users|length > 0 %}
+                        {% for u in users|reverse %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>{{ u.first_name }} {{ u.last_name if u.last_name else '' }}</td>
+                            <td>{{ u.email }}</td>
+                            <td>
+                                <span>
+                                    {{ u.accountType.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if u.accountType == 'admin' %}
+                                    {% if u.admin_code == '1236' %}
+                                        <span class="badge badge-warning">Super Admin</span>
+                                    {% elif u.admin_code == '1234' %}
+                                        <span class="badge badge-info">IT Admin</span>
+                                    {% elif u.admin_code == '1235' %}
+                                        <span class="badge badge-secondary">Hardware Admin</span>
+                                    {% else %}
+                                        <span class="text-muted">Admin</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="action-buttons">
+                                {% set is_admin = (user and user.accountType == 'admin') %}
+                                {% set is_super_admin = (is_admin and user.admin_code == '1236') %}
+                                {% set target_is_admin = (u.accountType == 'admin') %}
+                                {% set is_self = (user and u.id == user.id) %}
+                                
+                                {# Rules:
+                                   - Regular users: can only edit themselves; no delete
+                                   - Super Admin: can edit/delete anyone (except self-delete)
+                                   - Regular Admins: can edit/delete non-admin users; cannot edit/delete other admins (can edit self)
+                                #}
+                                
+                                {% if (not is_admin and is_self) or (is_admin and (is_self or is_super_admin or not target_is_admin)) %}
+                                <button class="btn btn-sm btn-warning" 
+                                        data-action="edit-user" 
+                                        data-user-id="{{ u.id }}" 
+                                        title="Edit User">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if (is_super_admin and not is_self) or (is_admin and not is_super_admin and not target_is_admin and not is_self) %}
+                                <button class="btn btn-sm btn-danger" 
+                                        data-action="delete-user" 
+                                        data-user-id="{{ u.id }}" 
+                                        title="Delete User">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="table-empty">
+                            <i class="fas fa-users"></i>
+                            <br>
+                            No users found in the system.
+                            <br>
+                            <small class="text-muted">Users will appear here when they register.</small>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Home{% endblock %}</title>
+
+    <!-- BootstrapCSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous" />
+    <!-- MD BootstrapCSS -->
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <!-- MDB -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/4.0.0/mdb.min.css" rel="stylesheet" />
+    <!-- CSS (merged into base.css) -->
+    <link rel="stylesheet" href="static/styles/base.css?v=20241208005">
+</head>
+
+<body>
+    <!-- ================================
+         INTEGRATED NAVBAR COMPONENT
+         ================================ -->
+    <nav class="navbar navbar-expand-lg modern-navbar">
+        <div class="container-fluid px-4">
+            <!-- Logo/Brand -->
+            <a class="navbar-brand" href="{% if user and user.is_authenticated %}{% if user.accountType and user.accountType == 'admin' %}{{ brand_link | default('/admin-dashboard') }}{% else %}/tickets{% endif %}{% else %}/{% endif %}">
+                Mphasis
+            </a>
+
+            <!-- Mobile toggle button -->
+            <button class="navbar-toggler border-0" type="button" 
+                data-toggle="collapse" data-mdb-toggle="collapse"
+                data-target="#navbarContent" data-mdb-target="#navbarContent"
+                aria-controls="navbarContent" aria-expanded="false" 
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Collapsible content -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                {% if user and user.is_authenticated %}
+                    {% if user.accountType and user.accountType == 'admin' %}
+                    <!-- Admin Navigation Links -->
+                    <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                        <li class="nav-item {% if request.path == '/admin-dashboard' %}active{% endif %}">
+                            <a class="nav-link px-3" href="/admin-dashboard">Dashboard {% if request.path == '/admin-dashboard' %}<span class="sr-only">(current)</span>{% endif %}</a>
+                        </li>
+                        <li class="nav-item {% if request.path == '/user-management' %}active{% endif %}">
+                            <a class="nav-link px-3" href="/user-management">Users {% if request.path == '/user-management' %}<span class="sr-only">(current)</span>{% endif %}</a>
+                        </li>
+                        {% if user.admin_code == '1236' %}
+                        <li class="nav-item {% if request.path == '/reports' %}active{% endif %}">
+                            <a class="nav-link px-3" href="/reports">Reports {% if request.path == '/reports' %}<span class="sr-only">(current)</span>{% endif %}</a>
+                        </li>
+                        {% endif %}
+
+                    </ul>
+
+                    <!-- Right side elements for admin -->
+                    <div class="d-flex align-items-center">
+
+                        <!-- Notifications -->
+                        <div class="dropdown mr-3">
+                            <a class="btn btn-outline-primary btn-sm position-relative" href="#" 
+                               data-toggle="dropdown" data-mdb-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if user.notifications and user.notifications|length > 0 %}
+                                <span class="notification-badge">
+                                    {{ user.notifications[-9:]|length }}
+                                </span>
+                                {% elif notifications and notifications|length > 0 %}
+                                <span class="notification-badge">
+                                    {{ notifications|length }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right notification-dropdown">
+                                {% if user.notifications %}
+                                    {% for notification in (user.notifications[-9:])|reverse %}
+                                    <a class="dropdown-item py-2 notification-item" 
+                                       style="color: {% if notification.status == 'success' %}green{% else %}red{% endif %};">
+                                        {{ notification.message }}
+                                    </a>
+                                    {% endfor %}
+                                {% elif notifications %}
+                                    {% for notification in (notifications[-9:])|reverse %}
+                                    <a class="dropdown-item py-2 notification-item" 
+                                       style="color: {% if notification.status == 'success' %}green{% else %}red{% endif %};">
+                                        {{ notification.message }}
+                                    </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- User Profile (Admin) -->
+                        <div class="dropdown">
+                            <button class="btn btn-dark btn-sm d-flex align-items-center" type="button" 
+                                data-toggle="dropdown" data-mdb-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-user mr-2"></i>
+                                <span class="d-none d-md-inline">{{ user.first_name }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="/profile"><i class="fas fa-user-circle mr-2"></i>Your Profile</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt mr-2"></i>Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Normal User Navigation Links -->
+                    <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                        <li class="nav-item {% if request.path == '/tickets' %}active{% endif %}">
+                            <a class="nav-link px-3" href="/tickets">My Tickets {% if request.path == '/tickets' %}<span class="sr-only">(current)</span>{% endif %}</a>
+                        </li>
+                        <li class="nav-item {% if request.path == '/support' %}active{% endif %}">
+                            <a class="nav-link px-3" href="/support">Create Ticket {% if request.path == '/support' %}<span class="sr-only">(current)</span>{% endif %}</a>
+                        </li>
+                    </ul>
+
+                    <!-- Right side elements for normal users -->
+                    <div class="d-flex align-items-center">
+                        <!-- Notifications -->
+                        <div class="dropdown mr-3">
+                            <a class="btn btn-outline-primary btn-sm position-relative" href="#" 
+                               data-toggle="dropdown" data-mdb-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if user.notifications and user.notifications|length > 0 %}
+                                <span class="notification-badge">
+                                    {{ user.notifications[-9:]|length }}
+                                </span>
+                                {% elif notifications and notifications|length > 0 %}
+                                <span class="notification-badge">
+                                    {{ notifications|length }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right notification-dropdown">
+                                {% if user.notifications %}
+                                    {% for notification in (user.notifications[-9:])|reverse %}
+                                    <a class="dropdown-item py-2 notification-item" 
+                                       style="color: {% if notification.status == 'success' %}green{% else %}red{% endif %};">
+                                        {{ notification.message }}
+                                    </a>
+                                    {% endfor %}
+                                {% elif notifications %}
+                                    {% for notification in (notifications[-9:])|reverse %}
+                                    <a class="dropdown-item py-2 notification-item" 
+                                       style="color: {% if notification.status == 'success' %}green{% else %}red{% endif %};">
+                                        {{ notification.message }}
+                                    </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- User Profile -->
+                        <div class="dropdown">
+                            <button class="btn btn-dark btn-sm d-flex align-items-center" type="button" 
+                                data-toggle="dropdown" data-mdb-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-user mr-2"></i>
+                                <span class="d-none d-md-inline">{{ user.first_name }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="/profile"><i class="fas fa-user-circle mr-2"></i>My Profile</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt mr-2"></i>Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% else %}
+                <!-- Center Navigation Links for Non-authenticated Users -->
+                <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/#services">Services</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" href="/#about">About us</a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alert Container Below Navbar -->
+    <div id="alert-container" style="position: fixed; top: 70px; right: 20px; z-index: 1030; pointer-events: none; max-width: 350px; width: auto;"></div>
+
+    <!-- Flash Messages as Global Toasts -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <script>
+          // Defer until all scripts (including index.js) are loaded
+          window.addEventListener('load', function () {
+            try {
+              var flashed = {{ messages|tojson|safe }}; // [[category, message], ...]
+              flashed.forEach(function (item) {
+                var category = (item && item[0]) || 'info';
+                var message = (item && item[1]) || '';
+                var type = (category === 'error') ? 'error' : (category || 'info');
+                if (typeof window.showToast === 'function') {
+                  window.showToast(type, message, 4000);
+                } else {
+                  // Fallback alert if index.js not loaded for some reason
+                  var container = document.getElementById('alert-container');
+                  if (container) {
+                    var div = document.createElement('div');
+                    div.className = 'alert alert-' + (type === 'error' ? 'danger' : type) + ' alert-dismissible fade show shadow-sm';
+                    div.innerHTML = '<div class="alert-content">' + message + '</div><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+                    container.appendChild(div);
+                    setTimeout(function () { if (div && div.parentNode) { div.parentNode.removeChild(div); } }, 4000);
+                  }
+                }
+              });
+            } catch (e) { /* no-op */ }
+          });
+        </script>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Slider -->
+    {% block slider %} {% endblock %}
+    
+    <!-- Contents -->
+    <main class="page-full container-fluid px-0">{% block content %} {% endblock %}</main>
+
+    <!-- Macros -->
+    {% macro render_users_table(users) %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover" id="usersTable">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Account Type</th>
+                    <th scope="col">Admin Role</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.first_name }} {{ user.last_name or '' }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.accountType == 'admin' %}
+                            <span class="badge badge-danger">Admin</span>
+                        {% else %}
+                            <span class="badge badge-primary">User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.accountType == 'admin' %}
+                            {{ user.admin_role or 'N/A' }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            {% if user.accountType == 'admin' %}
+                                <!-- Admin accounts cannot be edited or deleted by anyone -->
+                                <button type="button" class="btn btn-sm btn-secondary" disabled title="Cannot edit admin accounts">
+                                    <i class="fas fa-lock"></i> Admin Protected
+                                </button>
+                            {% elif user.id == current_user.id %}
+                                <!-- Cannot delete your own account -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary" 
+                                        onclick="openUserModal('edit', {{ user.id }})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" disabled title="Cannot delete your own account">
+                                    <i class="fas fa-user-shield"></i> Self
+                                </button>
+                            {% else %}
+                                <!-- Regular users can be edited and deleted by admins -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary" 
+                                        onclick="openUserModal('edit', {{ user.id }})">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger" 
+                                        onclick="showDeleteConfirmModal({{ user.id }}, '{{ user.first_name }} {{ user.last_name or '' }}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endmacro %}
+
+    <!-- Footer -->
+    {% block footer %} {% endblock %}
+
+    <!-- Scripts: Use Bootstrap 4 only to avoid conflicts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='index.js') }}?v=20241208005"></script>
+<script>
+  // Convert all .js-local-time elements from UTC ISO strings to the user's local time
+  (function() {
+    function fmt(d) {
+      // Example output: 12/08 11:21 AM
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12; if (hours === 0) hours = 12;
+      return `${mm}/${dd} ${hours}:${minutes} ${ampm}`;
+    }
+    function updateLocalTimes() {
+      document.querySelectorAll('.js-local-time[data-utc]')
+        .forEach(function(el) {
+          const iso = el.getAttribute('data-utc');
+          if (!iso) return;
+          const d = new Date(String(iso).trim());
+          if (!isNaN(d.getTime())) {
+            el.textContent = fmt(d);
+          }
+        });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updateLocalTimes);
+    } else {
+      updateLocalTimes();
+    }
+  })();
+</script>
+</body>
+
+</html>

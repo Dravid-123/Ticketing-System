@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% block title %}Technical Support{% endblock %}
+
+{% block content %}
+<style>
+    /* Make floating inputs consistent */
+    .form-floating > .form-control {
+        height: calc(3rem + 2px) !important;
+        padding-top: 1rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .form-floating > label {
+        padding: 0.75rem 0.75rem;
+        color: #6c757d;
+    }
+
+    /* Make non-floating selects match height */
+    .form-label {
+        display: none; /* hide label above, we'll use placeholder text instead */
+    }
+
+    .form-select {
+        height: calc(3rem + 2px) !important;
+        padding: 0.5rem 0.75rem;
+        color: #6c757d;
+    }
+
+    /* Bigger textarea */
+    textarea.form-control {
+        min-height: 160px;
+    }
+
+    /* Fix floating label for textarea */
+    .form-floating > textarea.form-control {
+        height: auto !important;
+        width: 1110px;
+        min-height: 160px;
+        padding-top: 1rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .form-floating > textarea.form-control:focus ~ label,
+    .form-floating > textarea.form-control:not(:placeholder-shown) ~ label {
+        opacity: 0.65;
+        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+    }
+
+    /* Category toggle styling (scoped) */
+    .category-toggle {
+        display: flex;
+        background-color: #e9ecef;            /* grey pill like screenshot */
+        border-radius: 8px;                   /* less rounded corners */
+        padding: 2px;                          /* gap around inner pill */
+        height: 44px;                          /* consistent size */
+        border: 0;
+        overflow: hidden;
+    }
+    .category-toggle .btn {
+        display: flex;                        /* center label content */
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        border: 0;                            /* remove inner borders */
+        margin: 0;
+        border-radius: 6px;                   /* less rounded inner corners */
+        color: #6c757d;                        /* inactive text */
+        background: transparent;
+        transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+    .category-toggle .btn-outline-primary {   /* override bootstrap outline */
+        border: 0;
+        box-shadow: none;
+    }
+    /* Hover when not selected */
+    .category-toggle .btn-check:not(:checked) + .btn:hover {
+        background: rgba(255,255,255,0.45);
+        color: #495057;
+    }
+    /* Selected state: primary blue instead of white */
+    .category-toggle .btn-check:checked + .btn {
+        background: #007bff;                  /* primary blue background */
+        color: #ffffff;                       /* white text */
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 3px 8px rgba(0,0,0,0.06);
+    }
+    /* Both segments share width */
+    .category-toggle label { flex: 1 1 0; }
+    @media (min-width: 576px) {
+        .category-toggle .btn { height: 100%; }
+    }
+
+    /* Fix spacing issues for Cubical + Toggle row */
+    .cf-row.align-items-stretch {
+        align-items: flex-end !important;    /* Align to bottom instead of stretch */
+        margin-bottom: 1rem;                 /* Add consistent bottom spacing */
+    }
+    
+    /* Ensure the toggle button wrapper aligns properly */
+    .cf-two-thirds.d-flex {
+        align-items: flex-end;               /* Align toggle to match input height */
+        padding-bottom: 0;                   /* Remove any extra padding */
+    }
+    
+    /* Remove extra top margin/padding that might cause spacing issues */
+    .cf.cf-one-half .cf-row {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Remove extra spacing between form fields */
+    .cf.cf-one-half {
+        margin-bottom: 1rem;                 /* Consistent spacing between form rows */
+    }
+    
+    /* Clean form section spacing */
+    .cf.cf-one-half .cf-row .cf.cf-full:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Define CF framework classes if not already defined */
+    .cf-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -0.5rem;
+    }
+    
+    .cf {
+        padding: 0 0.5rem;
+        box-sizing: border-box;
+    }
+    
+    .cf-one-half {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    .cf-one-third {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+    
+    .cf-two-thirds {
+        flex: 0 0 66.666667%;
+        max-width: 66.666667%;
+    }
+    
+    .cf-full {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    /* Force proper spacing for the form */
+    .cf-row {
+        margin-bottom: 1rem;
+    }
+    
+    .cf-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Consistent spacing between stacked items */
+    .cf.cf-one-half .cf-row .cf.cf-full + .cf.cf-full {
+        margin-top: 0.5rem;
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 class="mb-4">Report a Problem</h2>
+    <form method="POST" class="cf-row">
+
+        <!-- Row 1 -->
+        <div class="cf cf-one-half">
+            <div class="form-floating">
+                <input type="text" class="form-control" name="ticket_title" id="ticket_title" placeholder="Ticket Title" required>
+                <label for="ticket_title">Ticket Title</label>
+            </div>
+        </div>
+
+        <div class="cf cf-one-half">
+            <div class="form-floating">
+                <input type="text" class="form-control" name="project" id="project" placeholder="Project">
+                <label for="project">Project/Team</label>
+            </div>
+        </div>
+
+        <div class="cf cf-one-half">
+            <div class="form-floating">
+                <input type="text" class="form-control" name="project_manager" id="project_manager" placeholder="Project Manager">
+                <label for="project_manager">Team Lead</label>
+            </div>
+        </div>
+
+        <!-- Left column: Location + Request Type stacked -->
+        <div class="cf cf-one-half">
+            <div class="cf-row">
+                <div class="cf cf-full">
+                    <select class="form-select" id="location" name="location" required>
+                        <option value="" disabled selected>Location</option>
+                        <option>Tower E GND FLOOR</option>
+                        <option>Tower E 1st FLOOR</option>
+                        <option>Tower E 2nd FLOOR</option>
+                        <option>Tower E 3rd FLOOR</option>
+                        <option>Tower F GND FLOOR</option>
+                        <option>Tower F 1st FLOOR</option>
+                        <option>Tower F 2nd FLOOR</option>
+                        <option>Tower F 3rd FLOOR</option>
+                    </select>
+                </div>
+                <div class="cf cf-full" style="margin-top: 1rem;">
+                    <select class="form-select" id="ticket_type" name="ticket_type" required>
+                        <option value="" disabled selected>Request Type</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right side: Category + Cubical -->
+        <div class="cf cf-one-half" style="margin-top: -4.90rem !important;">
+            <div class="cf-row align-items-end" style="margin-bottom: 1rem;">
+                <!-- Category on the left -->
+                <div class="cf cf-one-half d-flex flex-column">
+                    <small class="form-text text-muted mb-2" style="font-size: 0.75rem; color: #6c757d !important; font-weight: 500; text-align: left;">Category</small>
+                    <div class="d-flex align-items-center" style="gap: 20px; margin-top: 5px;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="category" id="cat_software" value="software" required>
+                            <label class="form-check-label" for="cat_software" style="font-weight: 500; color: #495057;">
+                                IT
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="category" id="cat_hardware" value="hardware" required>
+                            <label class="form-check-label" for="cat_hardware" style="font-weight: 500; color: #495057;">
+                                Hardware
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cubical on the right (extended) -->
+                <div class="cf cf-one-half">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" name="cubical" id="cubical" placeholder="Cubical">
+                        <label for="cubical">Cubical</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New "From" and "To" fields for Printer Movement (Full Width Row) -->
+        <div id="printer-movement-fields" class="cf-full" style="display: none; margin-top: -40px; margin-bottom: 20px;">
+            <div class="cf-row">
+                <div class="cf cf-one-half">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" name="movement_from" id="movement_from" placeholder="From Location">
+                        <label for="movement_from">From</label>
+                    </div>
+                </div>
+                <div class="cf cf-one-half">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" name="movement_to" id="movement_to" placeholder="To Location">
+                        <label for="movement_to">To</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <script>
+            (function(){
+                const softwareOptions = [
+                    'Laptop','Desktop','Workstation','OS installation','Network issues','Private network','New setup','Server Issue','Lan Ports Not working','Adding users into Domain','Port Request','Fax Port Issue','VOIP','Others'
+                ];
+                const hardwareOptions = [
+                    'Printer Request','Cartridge Request','Printer Issue','Paper Request','Printer Movement Request','Printer Movement to Wireless Lab','Others'
+                ];
+
+                const ticketTypeSel = document.getElementById('ticket_type');
+                const catSoft = document.getElementById('cat_software');
+                const catHard = document.getElementById('cat_hardware');
+                const movementFields = document.getElementById('printer-movement-fields');
+                const movementFrom = document.getElementById('movement_from');
+                const movementTo = document.getElementById('movement_to'); 
+                const mainForm = document.querySelector('form');
+
+                // Add event listeners to radio buttons
+                const categoryRadios = document.querySelectorAll('input[name="category"]');
+                categoryRadios.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        if (radio.checked) {
+                            refresh();
+                        }
+                    });
+                });
+
+                // Listen for changes on the ticket type dropdown 
+                ticketTypeSel.addEventListener('change', function() {
+                    if (this.value === 'Printer Movement Request') {
+                        movementFields.style.display = 'block';
+                        movementFrom.required = true;
+                        movementTo.required = true;
+                    } else {
+                        movementFields.style.display = 'none';
+                        movementFrom.required = false;
+                        movementTo.required = false;
+                    }
+                });
+
+                function populate(opts){
+                    ticketTypeSel.innerHTML = '';
+                    const ph = document.createElement('option');
+                    ph.value = '';
+                    ph.disabled = true;
+                    ph.selected = true;
+                    ph.textContent = 'Request Type';
+                    ticketTypeSel.appendChild(ph);
+                    opts.forEach(o=>{
+                        const opt = document.createElement('option');
+                        opt.textContent = o;
+                        opt.value = o;
+                        ticketTypeSel.appendChild(opt);
+                    });
+                }
+
+                function refresh(){
+                    if(!catSoft.checked && !catHard.checked){
+                        ticketTypeSel.innerHTML = '';
+                        const ph = document.createElement('option');
+                        ph.value = '';
+                        ph.disabled = true;
+                        ph.selected = true;
+                        ph.textContent = 'Request Type';
+                        ticketTypeSel.appendChild(ph); 
+                        // Hide movement fields if no category is selected
+                        movementFields.style.display = 'none';
+                        movementFrom.required = false;
+                        movementTo.required = false;
+                        return;
+                    }
+                    if(catHard.checked){ populate(hardwareOptions); }
+                    else if(catSoft.checked){ populate(softwareOptions); }
+                }
+
+                // Initial refresh
+                refresh();
+            })();
+            </script>
+        </div>
+
+        <!-- Full width textarea -->
+        <div class="cf cf-full" style="margin-top: -1.5rem !important;">
+            <div class="form-floating" style="margin-left: 80px;">
+                <textarea name="desc" id="desc" class="form-control" placeholder="Description" required></textarea>
+                <label for="desc">Description</label>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="cf cf-full d-flex justify-content-between mt-4">
+            <a href="{{ url_for('views.tickets') }}" class="btn btn-outline-secondary" style="margin-left: 80px;">Back</a>
+            <button type="submit" class="btn btn-primary" style="margin-right: 70px;">Submit</button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

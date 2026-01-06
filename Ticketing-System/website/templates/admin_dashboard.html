@@ -1,0 +1,749 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<br>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="table-title mb-0">Admin Dashboard</h1>
+    
+    <!-- Enhanced Search Bar -->
+    <div class="modern-search-container">
+        <div class="search-input-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" 
+                   class="modern-search-input" 
+                   id="adminTableSearch" 
+                   placeholder="Search tickets by ID, title, user..." 
+                   title="Search by Ticket ID (#1), User ID, Title, Description, Created by, Project, Location, Status, etc. Try: #123, ticket1, user2, or any text"
+                   value="{{ search_query }}">
+            <button type="button" class="search-clear-btn" id="searchClearBtn" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-results-info" id="searchResultsInfo" style="display: none;">
+            <span id="searchResultsText">0 results found</span>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Render Admin Tickets Table using macro from base.html -->
+    {{ render_tickets_table(allTicket, 'admin') }}
+
+    <!-- Pagination controls -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div>
+        Showing {{ ((page - 1) * per_page) + 1 }}–{{ ((page - 1) * per_page) + allTicket|length }} of {{ total }}
+      </div>
+      {{ render_pagination(page, pages, 'views.adminDashboard', q=search_query) }}
+    </div>
+</div>
+
+  <!-- Assign Ticket Modal -->
+  <div class="modal fade" id="assignTicketModal" tabindex="-1" role="dialog" aria-labelledby="assignTicketLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignTicketLabel">Assign Ticket</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form id="assignTicketForm">
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Ticket Title</label>
+                <input type="text" class="form-control" id="modal-ticket-title" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Project/Team</label>
+                <input type="text" class="form-control" id="modal-ticket-project" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Created by</label>
+                <input type="text" class="form-control" id="modal-ticket-created-by" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Location</label>
+                <input type="text" class="form-control" id="modal-ticket-location" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>Cubical</label>
+                <input type="text" class="form-control" id="modal-ticket-cubical" readonly>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Request Type</label>
+                <input type="text" class="form-control" id="modal-ticket-type" readonly>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Category</label>
+                <input type="text" class="form-control" id="modal-ticket-category" readonly>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea class="form-control" id="modal-ticket-desc" rows="3" readonly></textarea>
+            </div>
+
+            <!-- Printer Movement Fields (hidden by default) -->
+            <div class="form-row" id="modal-movement-fields" style="display: none;">
+              <div class="form-group col-md-6">
+                <label>Movement From</label>
+                <input type="text" class="form-control" id="modal-movement-from" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Movement To</label>
+                <input type="text" class="form-control" id="modal-movement-to" readonly>
+              </div>
+            </div>
+
+
+            <input type="hidden" id="assignTicketId" name="ticket_id">
+
+            <div class="form-group">
+              <label>Assign To</label>
+              <select class="form-control" id="assign-user" name="user_id" required>
+                  <option value="">Loading admins...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select class="form-control" id="assign-status" name="status" required>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            
+            <!-- Comment History Section -->
+            <div class="form-group">
+              <label><i class="fas fa-comments"></i> Comment History:</label>
+              <div id="modal-comment-history" class="border rounded p-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                <div class="text-center text-muted">
+                  <small>Loading comment history...</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="assignComment"><i class="fas fa-plus-circle"></i> Add New Comment:</label>
+              <textarea class="form-control" id="assignComment" name="comment" rows="3" placeholder="Enter your new comment here..."></textarea>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="saveAssignBtn">Assign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Ticket Modal (for Super Admin) -->
+  <div class="modal fade" id="viewTicketModal" tabindex="-1" role="dialog" aria-labelledby="viewTicketModalLabel" aria-hidden="true" data-ticket-id="">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="viewTicketModalLabel">Ticket Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" id="view-ticket-modal-body">
+          <form id="viewTicketForm">
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Ticket Title</label>
+                <input type="text" class="form-control" id="view-ticket-title" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Project/Team</label>
+                <input type="text" class="form-control" id="view-ticket-project" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Created by</label>
+                <input type="text" class="form-control" id="view-ticket-created-by" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Created On</label>
+                <input type="text" class="form-control" id="view-ticket-created-on" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Team Lead</label>
+                <input type="text" class="form-control" id="view-ticket-team-lead" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Location</label>
+                <input type="text" class="form-control" id="view-ticket-location" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>Cubical</label>
+                <input type="text" class="form-control" id="view-ticket-cubical" readonly>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Request Type</label>
+                <input type="text" class="form-control" id="view-ticket-type" readonly>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Category</label>
+                <input type="text" class="form-control" id="view-ticket-category" readonly>
+              </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Priority</label>
+                    <input type="text" class="form-control" id="view-ticket-priority" readonly>
+                </div>
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea class="form-control" id="view-ticket-desc" rows="3" readonly></textarea>
+            </div>
+
+            <!-- Printer Movement Fields (hidden by default) -->
+            <div class="form-row" id="view-movement-fields" style="display: none;">
+              <div class="form-group col-md-6">
+                <label>Movement From</label>
+                <input type="text" class="form-control" id="view-movement-from" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Movement To</label>
+                <input type="text" class="form-control" id="view-movement-to" readonly>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Assign To</label>
+              <input type="text" class="form-control" id="view-assign-user" readonly>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <input type="text" class="form-control" id="view-assign-status" readonly>
+            </div>
+            
+            <!-- Comment History Section -->
+            <div class="form-group">
+              <label><i class="fas fa-comments"></i> Comment History:</label>
+              <div id="view-modal-comment-history" class="border rounded p-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                <div class="text-center text-muted">
+                  <small>Loading comment history...</small>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="viewTicketModalBodyTemplate" style="display: none;">
+    <form id="viewTicketForm">
+        <div class="form-row">
+            <div class="form-group col-md-6">
+            <label>Ticket Title</label>
+            <input type="text" class="form-control" id="view-ticket-title" readonly>
+            </div>
+            <div class="form-group col-md-6">
+            <label>Project/Team</label>
+            <input type="text" class="form-control" id="view-ticket-project" readonly>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+            <label>Created by</label>
+            <input type="text" class="form-control" id="view-ticket-created-by" readonly>
+            </div>
+            <div class="form-group col-md-6">
+            <label>Created On</label>
+            <input type="text" class="form-control" id="view-ticket-created-on" readonly>
+            </div>
+        </div>
+
+        <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>Team Lead</label>
+                <input type="text" class="form-control" id="view-ticket-team-lead" readonly>
+              </div>
+              <div class="form-group col-md-6">
+                <label>Location</label>
+                <input type="text" class="form-control" id="view-ticket-location" readonly>
+              </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-4">
+            <label>Cubical</label>
+            <input type="text" class="form-control" id="view-ticket-cubical" readonly>
+            </div>
+            <div class="form-group col-md-4">
+            <label>Request Type</label>
+            <input type="text" class="form-control" id="view-ticket-type" readonly>
+            </div>
+            <div class="form-group col-md-4">
+            <label>Category</label>
+            <input type="text" class="form-control" id="view-ticket-category" readonly>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label>Priority</label>
+                <input type="text" class="form-control" id="view-ticket-priority" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" id="view-ticket-desc" rows="3" readonly></textarea>
+        </div>
+
+        <!-- Printer Movement Fields (hidden by default) -->
+        <div class="form-row" id="view-movement-fields" style="display: none;">
+            <div class="form-group col-md-6">
+            <label>Movement From</label>
+            <input type="text" class="form-control" id="view-movement-from" readonly>
+            </div>
+            <div class="form-group col-md-6">
+            <label>Movement To</label>
+            <input type="text" class="form-control" id="view-movement-to" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Assign To</label>
+            <input type="text" class="form-control" id="view-assign-user" readonly>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <input type="text" class="form-control" id="view-assign-status" readonly>
+        </div>
+        
+        <!-- Comment History Section -->
+        <div class="form-group">
+            <label><i class="fas fa-comments"></i> Comment History:</label>
+            <div id="view-modal-comment-history" class="border rounded p-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+            <div class="text-center text-muted">
+                <small>Loading comment history...</small>
+            </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block footer %}
+<!-- Admin-specific Scripts -->
+<script>
+function initAdminDashboard() {
+    if (typeof $ === 'undefined') {
+        setTimeout(initAdminDashboard, 100);
+        return;
+    }
+    
+$(document).ready(function() {
+    // Auto-refresh functionality
+    let autoRefreshInterval;
+    
+    function startAutoRefresh() {
+        // Refresh every 30 seconds
+        autoRefreshInterval = setInterval(function() {
+            console.log('Auto-refreshing admin dashboard...');
+            // Add timestamp to prevent caching
+            const timestamp = new Date().getTime();
+            window.location.href = '/admin-dashboard?auto_refresh=' + timestamp;
+        }, 30000); // 30 seconds
+    }
+    
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    }
+    
+    // Switch to event-driven refresh via SSE: listen to user-side updates
+    (function() {
+        try {
+            const es = new EventSource('/events');
+            es.onmessage = function(evt) {
+                try {
+                    const data = JSON.parse(evt.data || '{}');
+                    if (!data) return;
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('refresh', Date.now());
+                    window.location.replace(url.toString());
+                } catch (e) {
+                    console.warn('SSE parse error', e);
+                }
+            };
+            es.onerror = function() {
+                // Best-effort reconnect by reloading once after small delay
+                setTimeout(function(){
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('refresh', Date.now());
+                    window.location.replace(url.toString());
+                }, 2000);
+            };
+        } catch (e) {
+            console.warn('SSE not available, no auto-refresh');
+        }
+    })();
+
+    // Stop auto-refresh is not needed with SSE, but keep modal listeners for future use
+    $('#assignTicketModal').on('show.bs.modal', function() {
+        console.log('Modal opened');
+    });
+    $('#assignTicketModal').on('hidden.bs.modal', function() {
+        console.log('Modal closed');
+    });
+    
+    // Handle assign button clicks to open modal
+    $('.assign-btn').on('click', function() {
+        const ticketId = $(this).data('ticket-id');
+        const assignType = $(this).data('assign-type');
+        
+        // Set ticket ID in hidden input
+        $('#assignTicketId').val(ticketId);
+        
+        // Load ticket details and comment history
+        loadTicketDetails(ticketId);
+        loadCommentHistory(ticketId);
+        
+        // Update modal title (button text will be set dynamically in loadTicketDetails)
+        if (assignType === 'update') {
+            $('#assignTicketLabel').text('Update Ticket Assignment');
+        } else {
+            $('#assignTicketLabel').text('Assign Ticket');
+        }
+    });
+
+    // Handle save/update button click
+    $('#saveAssignBtn').on('click', function() {
+        const ticketId = $('#assignTicketId').val();
+        const userId = $('#assign-user').val();
+        const status = $('#assign-status').val();
+        const comment = $('#assignComment').val();
+        
+        if (!userId) {
+            alert('Please select a user to assign the ticket to.');
+            return;
+        }
+        
+        // Send assignment data
+        $.ajax({
+            url: '/assign-ticket',
+            method: 'POST',
+            data: {
+                ticket_id: ticketId,
+                user_id: userId,
+                status: status,
+                comment: comment
+            },
+            success: function(response) {
+                console.log('Assignment response:', response);
+                
+                if (response.success) {
+                    // Close the modal
+                    $('#assignTicketModal').modal('hide');
+                    
+                    // Show success message
+                    alert('Ticket assigned successfully! Redirecting to refresh the dashboard...');
+                    
+                    // Force a complete page refresh by redirecting to admin dashboard
+                    setTimeout(function() {
+                        console.log('Redirecting to admin dashboard with refresh...');
+                        // Add timestamp to ensure fresh page load
+                        const timestamp = new Date().getTime();
+                        // Use location.replace to force a complete page reload
+                        window.location.replace('/admin-dashboard?refresh=' + timestamp);
+                    }, 300);
+                } else {
+                    alert('Assignment failed: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                console.error('Response:', xhr.responseText);
+                alert('Error updating ticket assignment. Please try again. Check console for details.');
+            },
+            complete: function() {
+                console.log('Assignment request completed');
+            }
+        });
+    });
+});
+
+function loadTicketDetails(ticketId) {
+    console.log('[DEBUG] Loading ticket details for ID:', ticketId);
+    const ticketRow = $(`button[data-ticket-id="${ticketId}"], button[data-ticket-id='${ticketId}']`).first().closest('tr');
+    console.log('[DEBUG] Found ticket row:', ticketRow.length > 0);
+    
+    // Populate modal fields from table row
+    const title = ticketRow.find('.ticket-title').text().trim();
+    const desc = ticketRow.find('.ticket-desc').attr('title') || '';
+    console.log('[DEBUG] Title:', title, 'Desc:', desc);
+    
+    $('#modal-ticket-title').val(title);
+    $('#modal-ticket-desc').val(desc);
+    
+    // For admin view, columns are: ID, Title, Desc, Created by, Created on, Project, Manager, Location, Cubical, Type, Category
+    // So Project is column 6, Manager is 7, Location is 8, Cubical is 9, Type is 10, Category is 11
+    const project = ticketRow.find('td:nth-child(6)').text().trim();
+    const manager = ticketRow.find('td:nth-child(7)').text().trim();
+    const location = ticketRow.find('td:nth-child(8)').text().trim();
+    const cubical = ticketRow.find('td:nth-child(9)').text().trim();
+    const type = ticketRow.find('td:nth-child(10)').text().trim();
+    
+    console.log('[DEBUG] Project:', project, 'Manager:', manager, 'Location:', location);
+    console.log('[DEBUG] Cubical:', cubical, 'Type:', type);
+    
+    $('#modal-ticket-project').val(project);
+    $('#modal-ticket-manager').val(manager);
+    $('#modal-ticket-location').val(location);
+    $('#modal-ticket-cubical').val(cubical);
+    $('#modal-ticket-type').val(type);
+    
+    // Extract category from badge in column 11
+    const categoryCell = ticketRow.find('td:nth-child(11)');
+    console.log('[DEBUG] Category cell found:', categoryCell.length > 0);
+    console.log('[DEBUG] Category cell HTML:', categoryCell.html());
+    
+    let ticketCategory = '';
+    
+    const badgeElement = categoryCell.find('.badge');
+    console.log('[DEBUG] Badge element found:', badgeElement.length > 0);
+    
+    if (badgeElement.length > 0) {
+        const badgeHtml = badgeElement.html();
+        const badgeText = badgeElement.text();
+        console.log('[DEBUG] Badge HTML:', badgeHtml);
+        console.log('[DEBUG] Badge text:', badgeText);
+        
+        if (badgeHtml.includes('Software')) {
+            ticketCategory = 'Software';
+        } else if (badgeHtml.includes('Hardware')) {
+            ticketCategory = 'Hardware';
+        } else {
+            ticketCategory = badgeElement.text().replace(/[^\w\s]/g, '').trim();
+        }
+    } else {
+        const cellText = categoryCell.text().trim();
+        console.log('[DEBUG] Category cell text (no badge):', cellText);
+        if (cellText && cellText !== 'N/A') {
+            ticketCategory = cellText;
+        }
+    }
+    
+    console.log('[DEBUG] Final extracted category:', ticketCategory);
+    $('#modal-ticket-category').val(ticketCategory || 'General');
+    $('#assignComment').val('');
+    
+    // Debug logging for category extraction
+    console.log('[DEBUG] Extracted category:', ticketCategory);
+    
+    // Get ticket details from server
+    $.ajax({
+        url: `/get-ticket-details/${ticketId}`,
+        method: 'GET',
+        success: function(data) {
+            if (data.assigned_user_id) {
+                $("#saveAssignBtn").text("Update").removeClass("btn-success").addClass("btn-primary");
+                $('#assign-status').val(data.status);
+            } else {
+                $("#saveAssignBtn").text("Assign").removeClass("btn-primary").addClass("btn-success");
+            }
+            loadAssignableUsers(ticketCategory, data.assigned_user_id);
+        },
+        error: function() {
+            $("#saveAssignBtn").text("Assign").removeClass("btn-primary").addClass("btn-success");
+            loadAssignableUsers(ticketCategory, null);
+        }
+    });
+    
+    // Load comment history
+    loadCommentHistory(ticketId);
+}
+
+function loadAssignableUsers(category, currentAssignedUserId) {
+    console.log('[DEBUG] Loading assignable users for category:', category, 'currentAssignedUserId:', currentAssignedUserId);
+    const dropdown = $('#assign-user');
+    dropdown.empty().append('<option value="">Loading...</option>');
+    
+    $.ajax({
+        url: '/get-assignable-users',
+        method: 'POST',
+        data: { category: category || '' },
+        success: function(data) {
+            console.log('[DEBUG] Assignable users response:', data);
+            dropdown.empty().append('<option value="">Select Admin...</option>');
+            
+            if (data.success && data.users) {
+                // Sort users: Super Admin first, then category-specific, then others
+                let sortedUsers = data.users.sort((a, b) => {
+                    if (a.admin_code === '1236') return -1;
+                    if (b.admin_code === '1236') return 1;
+                    
+                    if (category && category.toLowerCase() === 'software') {
+                        if (a.admin_code === '1234' && b.admin_code !== '1234') return -1;
+                        if (b.admin_code === '1234' && a.admin_code !== '1234') return 1;
+                    }
+                    
+                    if (category && category.toLowerCase() === 'hardware') {
+                        if (a.admin_code === '1235' && b.admin_code !== '1235') return -1;
+                        if (b.admin_code === '1235' && a.admin_code !== '1235') return 1;
+                    }
+                    
+                    return a.first_name.localeCompare(b.first_name);
+                });
+                
+                sortedUsers.forEach(function(user) {
+                    const selected = (currentAssignedUserId && user.id == currentAssignedUserId) ? 'selected' : '';
+                    const roleText = user.admin_role ? ` (${user.admin_role})` : '';
+                    const icon = user.admin_code === '1236' ? '⭐ ' : '';
+                    dropdown.append(`<option value="${user.id}" ${selected}>${icon}${user.first_name} ${user.last_name}${roleText}</option>`);
+                });
+            } else {
+                dropdown.append('<option value="" disabled>No admins available</option>');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.log('[DEBUG] Error loading assignable users:', status, error);
+            console.log('[DEBUG] Response:', xhr.responseText);
+            alert('DEBUG: AJAX ERROR - ' + status + ': ' + error);
+            dropdown.empty();
+            dropdown.append('<option value="">Select Admin...</option>');
+            dropdown.append('<option value="" disabled>Error loading admins</option>');
+        }
+    });
+}
+
+
+
+function loadCommentHistory(ticketId) {
+    $('#modal-comment-history').html(
+        '<div class="text-center text-muted p-3"><small><i class="fas fa-spinner fa-spin"></i> Loading comments...</small></div>'
+    );
+    
+    $.ajax({
+        url: `/get-ticket-comments/${ticketId}`,
+        method: 'GET',
+        success: function(data) {
+            if (data.success && data.comments) {
+                displayCommentHistory(data.comments);
+            } else {
+                displayCommentHistory([]);
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'Unable to load comment history';
+            if (xhr.status === 403) {
+                errorMessage = 'Permission denied';
+            } else if (xhr.status === 404) {
+                errorMessage = 'Comments not found';
+            } else if (xhr.status === 500) {
+                errorMessage = 'Server error';
+            }
+            
+            $('#modal-comment-history').html(`
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-triangle"></i> ${errorMessage}
+                </div>
+            `);
+        }
+    });
+}
+
+function displayCommentHistory(comments) {
+    const historyDiv = $('#modal-comment-history');
+    
+    if (!comments || comments.length === 0) {
+        historyDiv.html(
+            '<div class="text-center text-muted p-3"><small><i class="fas fa-comment-slash"></i> No comments yet</small></div>'
+        );
+        return;
+    }
+    
+    let html = '';
+    comments.forEach((comment) => {
+        
+        // Style based on comment type: admin, user, system
+        let bgColor = '#e3f2fd', borderColor = '#2196f3', textColor = '#1565c0', icon = 'fa-user-shield';
+        if (comment.type === 'user') {
+            bgColor = '#f1f8e9';
+            borderColor = '#4caf50';
+            textColor = '#2e7d32';
+            icon = 'fa-user';
+        } else if (comment.type === 'system') {
+            bgColor = '#f5f5f5';
+            borderColor = '#9e9e9e';
+            textColor = '#616161';
+            icon = 'fa-info-circle';
+        }
+        
+        // Determine display name
+        let displayName = comment.user_name;
+        if (!displayName) {
+            if (comment.type === 'user') {
+                displayName = 'User';
+            } else if (comment.type === 'system') {
+                displayName = 'System';
+            } else {
+                displayName = 'Admin';
+            }
+        }
+        
+        // Escape HTML in text content
+        const escapedText = (comment.text || 'No text').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        html += `
+            <div class="mb-2" style="padding: 6px 8px; background-color: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 4px; font-size: 12px;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span style="font-weight: bold; color: ${textColor};">
+                        <i class="fas ${icon}"></i> ${displayName}
+                    </span>
+                    <small style="color: #666;">${comment.timestamp || 'N/A'}</small>
+                </div>
+                <div style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.3;">${escapedText}</div>
+            </div>
+        `;
+    });
+    
+    console.log('[DEBUG] Generated HTML length:', html.length);
+    historyDiv.html(html);
+    console.log('[DEBUG] Comment history display complete');
+}
+
+}); // End $(document).ready
+
+} // End initAdminDashboard function
+
+// Initialize when page loads
+initAdminDashboard(); // Keep this to initialize other admin dashboard scripts
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Login Portal{% endblock %}
+
+{% block content %}
+<style>
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+main.page-full {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.portal-container {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+}
+.portal-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+.portal-subtitle {
+    color: #475569;
+    font-size: 1.1rem;
+    margin-bottom: 32px;
+}
+.portal-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+.portal-btn {
+    padding: 14px 28px;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 12px;
+    text-decoration: none;
+}
+</style>
+<div class="portal-container">
+    <h1 class="portal-title">Select Your Portal</h1>
+    <p class="portal-subtitle">Please choose the appropriate login for your role.</p>
+    <div class="portal-actions">
+        <a href="{{ url_for('views.user_auth') }}" class="btn btn-primary portal-btn">Employee Login</a>
+        <a href="{{ url_for('views.admin_auth') }}" class="btn btn-dark portal-btn">Admin Login</a>
+    </div>
+</div>
+{% endblock %}

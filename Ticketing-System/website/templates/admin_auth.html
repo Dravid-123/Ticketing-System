@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Admin Authentication{% endblock %}
+
+{% block content %}
+<style>
+/* Combined Home + Auth layout */
+.home-auth {
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start;
+  min-height: auto;
+  padding-top: 24px;
+  padding-bottom: 0;
+}
+.hero-left { padding: 24px 8px; }
+.hero-kicker { color:#6366f1; font-weight:800; letter-spacing:.08em; text-transform:uppercase; font-size:.8rem; }
+.hero-title { font-size: 2.2rem; font-weight: 800; color:#0f172a; margin: 8px 0 10px; }
+.hero-sub { color:#475569; font-size:1rem; max-width: 54ch; }
+
+/* Auth card with tabs */
+.auth-card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; box-shadow:0 12px 30px rgba(16,24,40,.08); padding:18px; }
+.auth-tabs { display:flex; gap:6px; background:#f3f4f6; padding:6px; border-radius:12px; }
+.auth-tab { flex:1; text-align:center; padding:10px; border-radius:10px; font-weight:700; color:#374151; cursor:pointer; user-select:none; }
+.auth-tab.active { background:#fff; color:#111827; box-shadow:0 4px 10px rgba(0,0,0,.06); }
+.auth-pane { display:none; margin-top:14px; }
+.auth-pane.active { display:block; }
+
+.form-group-modern { margin-bottom: 12px; }
+.form-label { display:block; margin-bottom:6px; color:#374151; font-weight:600; font-size:.9rem; }
+.form-input-modern { width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:10px; font-size:1rem; }
+.form-input-modern:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+.password-wrapper { position:relative; }
+.password-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9ca3af; }
+.password-toggle:hover { color:#6b7280; }
+.select-modern { width:100%; padding:12px 14px; border:1px solid #fca5a5; border-radius:10px; background:#fff5f5; }
+
+.btn-primary-modern { width:100%; padding:12px 14px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-weight:800; margin-top:8px; }
+.btn-primary-modern:hover { background:#4f46e5; }
+.small-note { color:#6b7280; font-size:.8rem; display:block; margin-top:6px; }
+
+/* Sticky footer: keep footer at the bottom, remove extra space below */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+main.page-full { flex: 1 0 auto; }
+footer { margin-top: auto !important; }
+
+@media (max-width: 992px){
+  .home-auth { grid-template-columns: 1fr; min-height: auto; align-items:start; }
+}
+</style>
+
+<section class="container home-auth">
+  <!-- Left: hero -->
+  <div class="hero-left">
+    <div class="hero-kicker">Administrator Portal</div>
+    <h1 class="hero-title">Manage the System</h1>
+    <p class="hero-sub">Log in to access the admin dashboard, manage tickets, oversee users, and view system reports.</p>
+  </div>
+
+  <!-- Right: auth card with tabs -->
+  <div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <div id="tab-login" class="auth-tab active" onclick="showAuth('login')">Admin Login</div>
+        <div id="tab-admin" class="auth-tab" onclick="showAuth('admin')">Admin Sign Up</div>
+      </div>
+
+      <!-- Admin Login -->
+      <div id="pane-login" class="auth-pane active">
+        <form method="POST" action="{{ url_for('auth.login') }}">
+          <div class="form-group-modern">
+            <label class="form-label" for="login_emp">Employee ID</label>
+            <input type="text" id="login_emp" name="employee_id" class="form-input-modern" placeholder="e.g. EMP12345" required />
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="login_password">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="login_password" name="password" class="form-input-modern" placeholder="Enter your password" required />
+              <button type="button" class="password-toggle" onclick="togglePassword('login_password','login_eye')"><i id="login_eye" class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary-modern">Login</button>
+        </form>
+      </div>
+
+      <!-- Admin sign up -->
+      <div id="pane-admin" class="auth-pane">
+        <form method="POST" action="{{ url_for('auth.admin_signup') }}">
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_emp">Employee ID</label>
+            <input type="text" id="admin_emp" name="employee_id" class="form-input-modern" placeholder="e.g. EMP12345" required />
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_email">Email</label>
+            <input type="email" id="admin_email" name="email" class="form-input-modern" placeholder="admin@company.com" required />
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_first">First Name</label>
+            <input type="text" id="admin_first" name="firstName" class="form-input-modern" placeholder="Admin" required />
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_last">Last Name</label>
+            <input type="text" id="admin_last" name="lastName" class="form-input-modern" placeholder="User" />
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_pass1">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="admin_pass1" name="password1" class="form-input-modern" placeholder="At least 8 characters" required />
+              <button type="button" class="password-toggle" onclick="togglePassword('admin_pass1','admin_eye1')"><i id="admin_eye1" class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_pass2">Confirm Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="admin_pass2" name="password2" class="form-input-modern" placeholder="Re-enter password" required />
+              <button type="button" class="password-toggle" onclick="togglePassword('admin_pass2','admin_eye2')"><i id="admin_eye2" class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_code">Admin Code</label>
+            <div class="password-wrapper">
+              <input type="password" id="admin_code" name="admin_code" class="form-input-modern" placeholder="Enter admin code" required />
+              <button type="button" class="password-toggle" onclick="togglePassword('admin_code','admin_code_eye')"><i id="admin_code_eye" class="fas fa-eye"></i></button>
+            </div>
+            <small class="small-note">Enter the secret admin code.</small>
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_security_question">Security Question</label>
+            <select id="admin_security_question" name="security_question" class="form-input-modern" required>
+                <option value="" disabled selected>Select a question</option>
+                <option value="first_pet">What was your first pet's name?</option>
+                <option value="mother_maiden_name">What is your mother's maiden name?</option>
+                <option value="birth_city">What city were you born in?</option>
+            </select>
+          </div>
+          <div class="form-group-modern">
+            <label class="form-label" for="admin_security_answer">Security Answer</label>
+            <input type="text" id="admin_security_answer" name="security_answer" class="form-input-modern" placeholder="Your answer" required />
+          </div>
+          <button type="submit" class="btn-primary-modern">Create Admin Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+function showAuth(which){
+  const tabs = ['login','admin'];
+  tabs.forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active', t===which);
+    document.getElementById('pane-'+t).classList.toggle('active', t===which);
+  });
+  if(history.pushState){ history.replaceState(null, '', '#'+which); } else { location.hash = which; }
+}
+function togglePassword(inputId, iconId){
+  const input = document.getElementById(inputId); const icon = document.getElementById(iconId);
+  if(input.type==='password'){ input.type='text'; icon.className='fas fa-eye-slash'; } else { input.type='password'; icon.className='fas fa-eye'; }
+}
+(function(){
+  const hash = (location.hash || '').replace('#','');
+  if(['login','admin'].includes(hash)) {
+    showAuth(hash);
+  } else {
+    showAuth('login');
+  }
+})();
+</script>
+{% endblock %}
+
+{% block footer %}
+<footer class="text-center text-lg-start bg-dark text-white" style="margin-top:0;">
+  <div class="text-center p-4" style="background-color: rgba(0, 0, 0, 0.05);">
+    © {{ 2025 }} Mphasis Ticketing
+  </div>
+</footer>
+{% endblock %}

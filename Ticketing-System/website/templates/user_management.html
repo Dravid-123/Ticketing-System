@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}
+User Access Control
+{% endblock %}
+
+{% block content %}
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alter-dismissable fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <br>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="table-title mb-0">User Access Control</h1>
+        
+    </div>
+
+    <div class="container-fluid">
+        <!-- Render Users Table using macro from base.html -->
+        {{ render_users_table(allUsers) }}
+        
+        <!-- Add user button -->
+        <div class="text-center mt-3">
+            <button class="btn btn-primary" id="addUserBtn" onclick="openUserModal('add')">
+                <i class="fas fa-user-plus"></i> Add User
+            </button>
+        </div>
+    </div>
+
+    <!-- Set current user context for JavaScript -->
+    <script>
+        // Set current user info for role-based access control
+        window.currentUserAdminCode = '{{ current_user.admin_code or "" }}';
+        window.currentUserAccountType = '{{ current_user.accountType or "user" }}';
+        window.currentUserEmail = '{{ current_user.email or "" }}';
+        console.log('Current user context:', {
+            adminCode: window.currentUserAdminCode,
+            accountType: window.currentUserAccountType,
+            email: window.currentUserEmail
+        });
+    </script>
+{% endblock %}

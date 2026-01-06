@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Ticket Reports{% endblock %}
+
+{% block content %}
+<br>
+<div class="d-flex justify-content-between align-items-center mb-4" style="padding-left: 50px; padding-right: 40px;">
+    <h1 class="table-title mb-0">Ticket Reports</h1>
+    <!-- Global Filters -->
+    <div class="filter-controls d-flex align-items-center">
+        <select id="periodFilter" class="form-control form-control-sm mr-2" style="width: 110px;">
+            <option value="daily">Today</option>
+            <option value="weekly">This Week</option>
+            <option value="monthly" selected>This Month</option>
+            <option value="yearly">This Year</option>
+        </select>
+        <select id="adminTypeFilter" class="form-control form-control-sm mr-2" style="width: 130px;">
+            <option value="all">All Admin Types</option>
+            <option value="it">IT</option>
+            <option value="hardware">Hardware</option>
+        </select>
+        <select id="adminNameFilter" class="form-control form-control-sm" style="width: auto;">
+            <option value="all">All Admins</option>
+            {% for admin in admins %}
+            {% if admin.admin_code != '1236' %} {# Exclude Super Admins #}
+            <option value="{{ admin.id }}" data-admin-code="{{ admin.admin_code }}">{{ admin.first_name }} {{ admin.last_name or '' }}</option>
+            {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="container-fluid" style="padding-left: 40px; padding-right: 40px; margin-top: -40px;">
+    <!-- KPI Cards and Chart Content -->
+
+    
+    
+
+    <!-- KPI Cards Row -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card h-100"><div class="card-body text-center d-flex flex-column justify-content-center"><h2 class="card-title h2 mb-2" id="kpi-total">0</h2><p class="card-text text-muted">Tickets Created</p></div></div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card h-100"><div class="card-body text-center d-flex flex-column justify-content-center"><h2 class="card-title h2 mb-2 text-success" id="kpi-solved">0</h2><p class="card-text text-muted">Solved/Closed</p></div></div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card h-100"><div class="card-body text-center d-flex flex-column justify-content-center"><h2 class="card-title h2 mb-2 text-info" id="kpi-progress">0</h2><p class="card-text text-muted">In Progress</p></div></div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card h-100"><div class="card-body text-center d-flex flex-column justify-content-center"><h2 class="card-title h2 mb-2 text-warning" id="kpi-pending">0</h2><p class="card-text text-muted">Pending</p></div></div>
+        </div>
+    </div>
+
+    <!-- Bar and Pie Chart Row -->
+    <div class="row mt-4" >
+        <!-- Bar Chart Section -->
+        <div class="col-lg-8 mb-4" style="margin-top: -20px;">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Ticket Status Breakdown</h5>
+                    <div style="position: relative; height:350px;">
+                        <canvas id="dailyStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Pie Chart Section -->
+        <div class="col-lg-4 mb-4" style="margin-top: -20px;">
+            <div class="card h-100 pie-chart-card">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-center mb-3">Ticket Status Distribution</h5>
+                    <div class="chart-wrapper flex-grow-1" style="position: relative; height: 350px;">
+                        <canvas id="statusPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if export_url %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ export_url }}" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Export All Data to Excel
+        </a>
+    </div>
+    {% endif %}
+
+
+</div>
+
+<!-- Include Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let dailyStatusChart;
+    let statusPieChart;
+
+    const periodFilter = document.getElementById('periodFilter');
+    const adminTypeFilter = document.getElementById('adminTypeFilter');
+    const adminNameFilter = document.getElementById('adminNameFilter');
+
+    // --- KPI CARDS ---
+    function updateKpiCards() {
+        const period = periodFilter.value;
+        const adminType = adminTypeFilter.value;
+        const adminId = adminNameFilter.value;
+        const endpoint = `/api/report-kpis?period=${period}&admin_type=${adminType}&admin_id=${adminId}`;
+        console.log('Fetching KPI data from:', endpoint); // DEBUG
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(result => {
+                console.log('KPI data result:', result); // DEBUG
+                if (result.success) {
+                    document.getElementById('kpi-total').textContent = result.total_created;
+                    document.getElementById('kpi-solved').textContent = result.solved_closed;
+                    document.getElementById('kpi-progress').textContent = result.in_progress;
+                    document.getElementById('kpi-pending').textContent = result.pending;
+                } else {
+                    console.error('Failed to fetch KPI data:', result.error); // DEBUG
+                }
+            })
+            .catch(error => { // DEBUG
+                console.error('Error fetching KPI data:', error); // DEBUG
+            });
+    }
+
+    // --- DAILY STATUS BAR CHART ---
+    function updateDailyStatusChart() {
+        const period = periodFilter.value;
+        const adminType = adminTypeFilter.value;
+        const adminId = adminNameFilter.value;
+        const endpoint = `/api/daily-status-chart?period=${period}&admin_type=${adminType}&admin_id=${adminId}`;
+        console.log('Fetching Daily Status Chart data from:', endpoint); // DEBUG
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(result => {
+                console.log('Daily Status Chart data result:', result); // DEBUG
+                if (result.success) {
+                    const ctx = document.getElementById('dailyStatusChart').getContext('2d');
+                    if (dailyStatusChart) {
+                        dailyStatusChart.destroy();
+                    }
+                    dailyStatusChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: result.labels,
+                            datasets: result.datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { stacked: true },
+                                y: { stacked: true, beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                } else {
+                    console.error('Failed to fetch Daily Status Chart data:', result.error); // DEBUG
+                }
+            })
+            .catch(error => { // DEBUG
+                console.error('Error fetching Daily Status Chart data:', error); // DEBUG
+            });
+    }
+
+    // --- STATUS PIE CHART ---
+    function updateStatusPieChart() {
+        const period = periodFilter.value;
+        const adminType = adminTypeFilter.value;
+        const adminId = adminNameFilter.value;
+        const endpoint = `/api/status-distribution-chart?period=${period}&admin_type=${adminType}&admin_id=${adminId}`;
+        console.log('Fetching Status Pie Chart data from:', endpoint); // DEBUG
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(result => {
+                console.log('Status Pie Chart data result:', result); // DEBUG
+                if (result.success) {
+                    const ctx = document.getElementById('statusPieChart').getContext('2d');
+                    if (statusPieChart) {
+                        statusPieChart.destroy();
+                    }
+                    statusPieChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: result.labels,
+                            datasets: [{
+                                label: 'Ticket Status',
+                                data: result.data,
+                                backgroundColor: [
+                                    'rgba(255, 193, 7, 0.9)',   // Pending - Yellow
+                                    'rgba(23, 162, 184, 0.9)',  // In Progress - Blue/Info
+                                    'rgba(40, 167, 69, 0.9)',   // Solved/Closed - Green
+                                ],
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true, // Make it responsive
+                            maintainAspectRatio: false, // Allow it to fill the container
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                } else {
+                    console.error('Failed to fetch Status Pie Chart data:', result.error); // DEBUG
+                }
+            })
+            .catch(error => { // DEBUG
+                console.error('Error fetching Status Pie Chart data:', error); // DEBUG
+            });
+    }
+
+    // --- EVENT LISTENERS ---
+    periodFilter.addEventListener('change', () => {
+        updateAllComponents();
+    });
+
+    function updateAllComponents() {
+        updateKpiCards();
+        updateStatusPieChart();
+        updateDailyStatusChart();
+    }
+
+    adminTypeFilter.addEventListener('change', () => {
+        const selectedType = adminTypeFilter.value;
+        const adminNameOptions = adminNameFilter.options;
+
+        // Reset admin name filter to "All Admins"
+        adminNameFilter.value = 'all';
+
+        // Loop through admin name options and show/hide based on type
+        for (let i = 1; i < adminNameOptions.length; i++) { // Start from 1 to skip "All Admins"
+            const option = adminNameOptions[i];
+            const adminCode = option.getAttribute('data-admin-code');
+
+            if (selectedType === 'all') {
+                option.style.display = 'block';
+            } else if (selectedType === 'it') {
+                // Show only IT (1234)
+                option.style.display = (adminCode === '1234') ? 'block' : 'none';
+            } else if (selectedType === 'hardware') {
+                // Show only Hardware (1235)
+                option.style.display = (adminCode === '1235') ? 'block' : 'none';
+            }
+        }
+
+        // Trigger chart update after filtering
+        updateAllComponents();
+    });
+    adminNameFilter.addEventListener('change', () => {
+        updateAllComponents();
+    });
+
+    // --- AUTO REFRESH ---
+    const REFRESH_INTERVAL = 60000; // 60 seconds
+    setInterval(() => {
+        // No need to update pie chart on auto-refresh, as it's tied to the period filter
+        // which is user-driven.
+        // updateKpiCards();
+        // updateDailyStatusChart();
+    }, REFRESH_INTERVAL);
+
+    // --- INITIAL LOAD ---
+    updateAllComponents();
+});
+</script>
+{% endblock %}

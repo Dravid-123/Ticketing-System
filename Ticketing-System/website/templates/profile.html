@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<style>
+/* Profile Page Styles */
+.profile-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.profile-header {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.profile-header-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  font-weight: 700;
+  position: relative;
+}
+
+.profile-info h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+}
+
+.profile-role {
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.profile-location {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.info-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.edit-btn {
+  background: #f97316;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.edit-btn:hover {
+  background: #ea580c;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 0.95rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.logout-section {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.logout-btn {
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.logout-btn:hover {
+  background: #b91c1c;
+  color: white;
+  text-decoration: none;
+}
+
+.unavailable-field {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .profile-header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+</style>
+
+<div class="profile-container">
+  <div class="page-title">
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">My Profile</h1>
+  </div>
+
+  <!-- Profile Header -->
+  <div class="profile-header">
+    <div class="profile-header-content">
+      <div class="profile-avatar">
+        {{ user.first_name[0].upper() if user.first_name else 'U' }}
+      </div>
+      <div class="profile-info">
+        <h1>{{ user.first_name }} {{ user.last_name or '' }}</h1>
+        <div class="profile-role">
+          {% if user.accountType == 'admin' %}
+            {% if user.admin_role %}
+              {{ user.admin_role }}
+            {% else %}
+              Admin
+            {% endif %}
+          {% else %}
+            Employee
+          {% endif %}
+        </div>
+        <div class="profile-location">Employee ID: {{ user.employee_id or 'Not Set' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Personal Information Section -->
+  <div class="info-section">
+    <div class="section-header">
+      <h2 class="section-title">Personal Information</h2>
+      <button class="edit-btn" onclick="alert('Edit functionality coming soon!')">Edit</button>
+    </div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">First Name</span>
+        <span class="info-value">{{ user.first_name or 'Not specified' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Last Name</span>
+        <span class="info-value">{{ user.last_name or 'Not specified' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Date of Birth</span>
+        <span class="info-value unavailable-field">Not available</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Email Address</span>
+        <span class="info-value">{{ user.email or 'Not specified' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Phone Number</span>
+        <span class="info-value unavailable-field">Not available</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">User Role</span>
+        <span class="info-value">
+          {% if user.accountType == 'admin' %}
+            {% if user.admin_role %}
+              {{ user.admin_role }}
+            {% else %}
+              Administrator
+            {% endif %}
+          {% else %}
+            Employee
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Address Section -->
+  <div class="info-section">
+    <div class="section-header">
+      <h2 class="section-title">Address</h2>
+      <button class="edit-btn" onclick="alert('Edit functionality coming soon!')">Edit</button>
+    </div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Country</span>
+        <span class="info-value unavailable-field">Not available</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">City</span>
+        <span class="info-value unavailable-field">Not available</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Postal Code</span>
+        <span class="info-value unavailable-field">Not available</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Section -->
+  <div class="logout-section">
+    <a href="/logout" class="logout-btn">Logout</a>
+  </div>
+</div>
+{% endblock %}

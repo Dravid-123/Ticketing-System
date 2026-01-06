@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}My Tickets{% endblock %}
+
+{% block content %}
+<br>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="table-title mb-0">My Tickets</h1>
+
+    <!-- Enhanced Search Bar -->
+    <div class="modern-search-container">
+        <div class="search-input-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text"
+                   class="modern-search-input"
+                   id="userTableSearch"
+                   placeholder="Search your tickets..."
+                   title="Search by Ticket ID, Title, Status, etc."
+                   value="{{ search_query }}">
+            <button type="button" class="search-clear-btn" id="userSearchClearBtn" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-results-info" id="userSearchResultsInfo" style="display: none;">
+            <span id="userSearchResultsText">0 results found</span>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Render User Tickets Table using macro from base.html -->
+    {{ render_tickets_table(open_tickets, 'user') }}
+
+    <!-- Pagination controls -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div>
+        Showing {{ ((page - 1) * per_page) + 1 }}–{{ ((page - 1) * per_page) + open_tickets|length }} of {{ total }}
+      </div>
+      <!-- Use the smart pagination macro from base.html -->
+      {{ render_pagination(page, pages, 'views.tickets', q=search_query) }}
+    </div>
+</div>
+{% endblock %}
